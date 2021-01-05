@@ -1,0 +1,23 @@
+#!/bin/bash
+ordem=0;
+previous=1;
+ordemprev=0;
+todo=`grep -n ^[A-Za-z] ppgene.csv`;
+lastline=`wc -l ppgene.csv| cut -f 1 -d' '`;
+lastline=$[$lastline + 1];
+todo="$todo $lastline:EndOfList"
+echo $todo
+for lista in $todo;
+do
+    ordemprev=$ordem;
+    ordem=$[$ordem + 1];
+    fim=`cut -f 1 -d':' <<< "$lista"`;
+    fim=$[$fim - 1];
+    nome=`cut -f 2 -d':' <<< "$lista"`;
+    echo ordem $ordem ordemprev $ordemprev fim $fim  previous $previous $nome
+    if [ $ordem -gt 1 ]; then
+	file=$(printf "column%0*d" 3 $ordemprev);
+	head -n $fim ppgene.csv | tail -n +$previous > $file
+	previous=$[$fim + 1];
+    fi;
+done

@@ -1,0 +1,86 @@
+#!/bin/bash -
+
+GENPPIVISUAL=`pwd`
+export GENPPIVISUAL
+
+mainfolder(){
+    OIFS=$IFS;IFS='/'
+    for dir in $GENPPIVISUAL
+    do
+	last=$dir
+    done
+    IFS=$OIFS;
+    echo $last
+}
+
+currentsite(){
+    ipaddress=`hostname -I | cut -f 1 -d " "`
+    case $ipaddress in
+	200.131.206.232)  site='bioinfo.facom.ufu.br/genppivisual';;
+	*) site=$ipaddress/$(mainfolder);;
+    esac
+    echo $site
+}
+
+if [ $# -gt 0 -a  -r $1 ]
+then
+    
+    #Creates a working directory 
+    if [ -d $1.tmp ]
+    then
+	rm $1.tmp
+    fi
+    mkdir $1.tmp
+    cd $1.tmp
+
+    webfolder=$(currentsite)
+    content=$(head -n 2 $1);
+
+    phylogenetic=$(grep -c phylogenetic  <<< $content) 
+    if [ $phylogenetic -gt 0 ];
+    then
+        echo "Genome,Genes,Interactions,Genomes">pp.csv;
+        awk '/^Genome:/{genome=$2} /^Profile/{print genome "," $6 "," $10 "," substr($18,1,length($18)-1)}' $1 >>pp.csv
+        Rscript $GENPPIVISUAL/figure1.R
+        result1=$(echo $1.tmp/Figure1-BoxPlot-PP-by-Genomes.pdf  | sed -e "s@"$GENPPIVISUAL"\/tmp\/@http:\/\/"$webfolder"\/tmp\/@g")
+
+	awk '/^Genome:/{print $2} /^Profile/{if($6>1){print $6} }' $1 > ppgene.csv;
+	$GENPPIVISUAL/verticalsplit;
+	paste column* > data.csv;
+	rm column*
+        Rscript $GENPPIVISUAL/figure4.R
+        result2=$(echo $1.tmp/Figure4-PP_Gene_count_gt1_by_Genome.pdf  | sed -e "s@"$GENPPIVISUAL"\/tmp\/@http:\/\/"$webfolder"\/tmp\/@g")
+	
+	printf "%s\n%s" $result1 $result2 > address
+    fi
+
+    neighborhood=$(grep -c neighborhood  <<< $content)
+    if [ $neighborhood -gt 0 ];
+    then
+        awk -F',' 'BEGIN{printf "Genome\tGenes\n"} !/#/{print $1 "\t" $3}' $1 > cn.csv
+        Rscript $GENPPIVISUAL/figure3.R
+        result=$(echo $1.tmp/Figure3-BoxPlot-CN-by-Genomes.pdf  | sed -e "s@"$GENPPIVISUAL"\/tmp\/@http:\/\/"$webfolder"\/tmp\/@g")
+        printf "%s" $result > address
+    fi
+
+    interaction=$(grep -c interaction  <<< $content) 
+    if [ $interaction -gt 0 ];
+    then
+
+	echo "Genome,CN,PP" > data.csv
+	awk -F ':' '/^Genome/{genome=$2} /^Number of ppi by cn/{cn=$2} /^Number of ppi by pp/{print genome "," cn "," $2 }' $1 >> data.csv
+	sed -i "s/[ ]\+//g" data.csv
+
+        Rscript $GENPPIVISUAL/figure2.R
+        result1=$(echo $1.tmp/Figure2-CN.pdf  | sed -e "s@"$GENPPIVISUAL"\/tmp\/@http:\/\/"$webfolder"\/tmp\/@g")
+
+        Rscript $GENPPIVISUAL/figure5.R
+        result2=$(echo $1.tmp/Figure5-PP.pdf  | sed -e "s@"$GENPPIVISUAL"\/tmp\/@http:\/\/"$webfolder"\/tmp\/@g")
+	
+	printf "%s\n%s" $result1 $result2 > address
+    fi
+
+else
+    echo GENPPIVISUAL ERROR: Check parameters or permissions 
+    echo Parameter1 =  file not found
+fi
