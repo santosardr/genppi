@@ -5,7 +5,7 @@ us to focus on our best: producing reliable interaction networks.
 **NOTE**
 If you are not interested in continuing this tutorial but do want to see plots 
 from your data, we also offer you a web site for this task. 
-http://bioinfo.facom.ufu.br/genppivisual/
+http://bioinformatics.college/genppivisual/
 All you need is to upload the files named "report.txt" from the data created by 
 GENPPI. The limitation is the size of the files. 
 
@@ -20,8 +20,15 @@ installation and execution:
 
 1 - R statistical software and development packages.
 For the Linux Ubuntu OS, one command can do this job.
-$ sudo apt install r-base libxml2-dev libfontconfig1-dev libcurl4-openssl-dev \
-libssl-dev libcairo2-dev libgit2-dev
+$ sudo apt install <package>
+However, you need to install each software separately due to dependencies requirements, where <package> is:
+r-base
+libxml2-dev
+libfontconfig1-dev
+libcurl4-openssl-dev
+libssl-dev
+libcairo2-dev
+libgit2-dev
 
 2 - Libraries.
 $ sudo R
