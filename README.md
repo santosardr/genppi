@@ -11,9 +11,7 @@ compile GENPPI to use at least 8 Gigabytes of RAM and use the program version
 capable of storing the bulk data on disk instead of memory, the GENPPIDB executable.
 For now, I had compiled all versions available in the binaries folder to use 
 different sizes of RAM. While I do not release the source code, if you need a 
-version compiled with more RAM, please get in touch with me[^1].
-
-[^1]: santosardr@ufu.br
+version compiled with more RAM, please get in touch with me.
 
 SBCL includes the whole core of libraries for each executable, and it explains the size of the 
 software in megabytes. 
