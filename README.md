@@ -1,8 +1,13 @@
 # GENPPI: Ab initio protein interation network generator
 
 GENPPI is a software written in Common Lisp and compiled with SBCL to create 
-complex networks of predicted proteins from tens or hundreds of genomes. Your 
-main limitation is the amount of RAM in your machine/server. For instance, using a 
+complex networks of predicted proteins from tens or hundreds of genomes.
+
+I have a youtube video in hands-on style to explain how to use it. Clique the below image to watch it.
+
+[![GENPPI simple explanation](https://img.youtube.com/vi/Q7G4sTZ00qk/0.jpg)](https://www.youtube.com/watch?v=Q7G4sTZ00qk)
+
+Your main limitation is the amount of RAM in your machine/server. For instance, using a 
 conventional computer of 8 Gigabytes of RAM, the software can deal with at least
 50 genomes, each possessing on average 2200 proteins (*Corynebacterium*). However,
 this same machine cannot process 80 genomes with an average of five thousand 
