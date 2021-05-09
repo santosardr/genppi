@@ -3,7 +3,7 @@
 GENPPI is a software written in Common Lisp and compiled with SBCL to create 
 complex networks of predicted proteins from tens or hundreds of genomes.
 
-I have a youtube video in hands-on style to explain how to use it. Clique the below image to watch it.
+I have a hands-on youtube video explaining how to use it. Clique the below image to watch it.
 
 [![GENPPI simple explanation](https://img.youtube.com/vi/Q7G4sTZ00qk/0.jpg)](https://www.youtube.com/watch?v=Q7G4sTZ00qk)
 
