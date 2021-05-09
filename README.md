@@ -5,7 +5,7 @@ complex networks of predicted proteins from tens or hundreds of genomes.
 
 I have a hands-on youtube video explaining how to use it. Clique the below image to watch it.
 
-[![GENPPI simple explanation](https://img.youtube.com/vi/Q7G4sTZ00qk/0.jpg)](https://www.youtube.com/watch?v=Q7G4sTZ00qk)
+[![GENPPI uncomplicated explanation](https://img.youtube.com/vi/Q7G4sTZ00qk/0.jpg)](https://www.youtube.com/watch?v=Q7G4sTZ00qk)
 
 Your main limitation is the amount of RAM in your machine/server. For instance, using a 
 conventional computer of 8 Gigabytes of RAM, the software can deal with at least

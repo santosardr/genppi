@@ -1,4 +1,4 @@
-# Ploting graphicals from GENPPI output
+# Graphical GENPPI's outputs
 
 We opt not to try to develop code for drawing bar and box plots. The reason is 
 simple: tons of excellent libraries in R, Python, Matlab, and others. It allows 
