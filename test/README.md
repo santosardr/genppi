@@ -44,12 +44,12 @@ For MS-Windows:
 ```bash
     genppi -dir test1/
 ```
-    Checking the numerical results:
+Checking the numerical results:
 
 ```bash
     wc -l test?/ppi-files/*.sif
 ```
-    Resulting in:
+Resulting in:
 ```text
           435 test1/ppi-files/Ba_Ak.sif
            90 test1/ppi-files/Ba_Bp.sif
@@ -168,6 +168,9 @@ Please copy and paste the *makeproteingraph* function in a text editor and updat
 After you navigate to the top of the web page of "A Little Book of R for Bioinformatics!" you will find several cool things to make with our network. For instance, this function shows the adjacent nodes to one specific:
 ```R
     adj(BaSg,"BUsg_616")
+```
+Resulting in:
+```text
     $BUsg_616
     [1] "BUsg_613" "BUsg_573" "BUsg_574" "BUsg_575" "BUsg_576"
 ```
@@ -176,6 +179,9 @@ We can show the degree distribution of the graph:
 ```R
     mydegrees <- graph::degree(BaSg)
     sort(mydegrees)
+```
+Resulting in:
+```text
     BUsg_018 BUsg_590 BUsg_595 BUsg_019 BUsg_065 BUsg_020 BUsg_591   BUsg20 
     1        1        1        2        2        2        2        2 
     (and so on)
