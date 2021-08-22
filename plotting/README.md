@@ -5,7 +5,7 @@ simple: tons of excellent libraries in R, Python, Matlab, and others. It allows
 us to focus on our best: producing reliable interaction networks.
 This is an example of a possible graphical plotting you can do from GENPPI's output:
 
-![ Phylogenetic profile Box plot for Corynebacterium genera](sample.pdf)
+![ Phylogenetic profile Box plot for Corynebacterium genera](https://github.com/santosardr/genppi/raw/master/plotting/sample.pdf)
 
 **NOTE**
 If you are not interested in continuing this tutorial but do want to see plots 

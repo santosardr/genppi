@@ -11,7 +11,7 @@ Let's through a step-by-step using the *Buchenera* genomes:
 ```bash
     cd genppi/test/Buchnera_aphidicola
 ```
-3) There are two folders inside Buchnera_aphidicola, the *assemblies* and the *refer*. The *assemblies* contains the protein multifasta files for five genomes. A grep looking for the greater than (>) signal tell us the number of proteins per genome:
+3) There are two folders inside Buchnera_aphidicola, the *assemblies* and the *refer*. The *assemblies* contains the protein multifasta files for five genomes. A *grep* looking for the greater than (>) signal tell us the number of proteins per genome:
 
 ```bash
     grep -c '>' assemblies/*.faa
@@ -26,21 +26,23 @@ Resulting in:
 ```
 However, we recommend working with the *refer* folder. The *refer* contains links for these genomes instead of a raw copy for each file. The purpose is to avoid creating multiple copies of all genomes because GENNPI writes his results in the form of subfolders and files within the folder passed as a parameter at runtime. If you execute GENPPI twice in the same folder, GENPPI will overwrite previous results. Unfortunately, for MS Windows users, the *refer* folder is useless because there is no way to create links like Mac and Linux do; copy the assemblies folder or use the current one (GENPPI do not alter the fasta files).
 
-4) Make a copy of the data source folder. Here the destination is the test1 folder.
+4) Make a copy of the data source folder. Here the destination are the test1 and test2 folder.
 For Linux and Mac: 
 ```bash
     cp -r refer test1
+    cp -r refer test2
 ```
 
-The "-r" should guarantee link preservation during copies, saving your disk space. Pay attention to the fact that offered links are relative to one folder up.
+The "-r" should guarantee link preservation during copies, saving your disk space. Please, pay attention to the fact that offered links are relative to one folder up.
 For MS-Windows:
 
-```bash
-    cp -r assemblies test1
+```text
+    xcopy assemblies test1\
+    xcopy assemblies test2\
 ```
 5) If the folder copying was successful, now it's time to execute GENPPI. 
 
-5.1) *Buchenera* genomes are one of the smallest genomes we have ever known; we expect a fast GENPPI execution and a few hundred edges for each genome. 
+5.1) *Buchenera* genomes are one of the smallest genomes we have ever known; we expect a fast GENPPI execution and a few hundred edges for each genome. Let's make it happen:
 ```bash
     genppi -dir test1/
 ```
@@ -53,16 +55,16 @@ Resulting in:
 ```text
           435 test1/ppi-files/Ba_Ak.sif
            90 test1/ppi-files/Ba_Bp.sif
-         **462 test1/ppi-files/Ba_G002.sif**
+          462 test1/ppi-files/Ba_G002.sif
           243 test1/ppi-files/Ba_Sg.sif
           350 test1/ppi-files/Ba_Ua.sif
 ```
 For standard GENPPI run (default parameters), the Ba_G002 has the more extensive interaction network with 462 edges comprising 126 proteins. Just looking for this output on the screen, we cannot know about the number of unique proteins. Please, hold on to that. Soon I will show you how.
 
-5.2) I will relax the GENPPI parameters to obtain more interactions in the final networks. When looking for conserved phylogenetic profiles, I meant to do such a relaxing parameter telling the GENNPI algorithms to accept as similar proteins those with at least 50% of identity (-aadifflimit 0 -aacheckminlimit 18). Additionally, I will ask for a dynamic expansion in the conserved neighborhood algorithm; it will start with a minimum window size of four to infer conservation (-ws 4). If the algorithm is successful for an initial ws, it will expand the window size by four units for subsequent well-success expansions. Besides, I will ask GENPPI for not using any filter for phylogenetic profiles (-ppcomplete).  After all, this is our command:
+5.2) I will relax the GENPPI parameters to obtain more interactions in the final networks. When looking for conserved phylogenetic profiles, I meant to do such a relaxing parameter telling the GENNPI algorithms to accept as similar proteins those with at least 50% of identity (-aadifflimit 0 -aacheckminlimit 18). Additionally, I will ask for a dynamic expansion in the conserved neighborhood algorithm; it will start with a minimum window size of four to infer conservation (-ws 4). If the algorithm is successful for an initial *ws*, it will expand the window size by four units for subsequent well-success expansions. Besides, I will ask GENPPI for not using any filter for phylogenetic profiles (-ppcomplete).  After all, this is our command:
 ```bash
-    genppi -expt dynamic -ws 4 -ppcomplete -aadifflimit 0 \ 
-    -aacheckminlimit 18 -dir test2/
+    genppi -aadifflimit 0 -aacheckminlimit 18 -expt dynamic -ws 4 \
+    -ppcomplete -dir test2/
 ```
 Checking the numerical results:
 ```bash
@@ -97,13 +99,13 @@ Resulting in:
     "BUMPG002_CDS00574"	"BUMPG002_CDS00572" 
     (and so on)
 ```
-Or, to redirect the TSV for a file, just type:
+To redirect the TSV for a file, just type:
 
 ```bash
     cut -f 1,3 test2/ppi-files/Ba_G002.sif > Ba_G002.tsv
 ```
 
-We will give you basic instructions to load the interaction networks created by GENPPI in some visual tools. Please, check the appropriate software documentation about how to install each software.
+We will give you basic instructions to load the interaction networks created by GENPPI in some visual tools. Please, check the appropriate documentation about how to install each software. In advance, I can tell, you will need at least Java 11 installed in your machine.
 
 ### GEPHI https://gephi.org/
 
@@ -113,20 +115,20 @@ A fast way to open a DOT file with GEPHI is by calling it in the command line.
     gephi test2/ppi-files/Ba_G002.dot &
 ```
 
-The GEPHI interface will ask you some basic questions about open a new workspace or append the data to an existing one. It also will ask you about the edges merge strategy. I use to sum several edges of the same pair of interacting proteins. For GENPPI, which could create three edges for a couple of interacting proteins, GEPHI will summarize in only one connection arrow. The OK button will open the interaction network. Initially, the interaction network appearance is a mass, completely aleatory distribution of vertices and connections. A more elegant view, for instance, is obtained by the options Window->Layout->Yifan Hu. One can see clusters of vertices. Another possibility is to calculate statistics according to the current topology. The Window->Statistics open a lateral menu of possible calculations. For instance, the Network Diameter option allows us to calculate the Betweenness Centrality and other measures. All the calculated data is available in a spreadsheet-like format in the Data Laboratory view.
+The GEPHI interface will ask you some basic questions about open a new workspace or append the data to an existing one. It also will ask you about the edges merge strategy. I use to sum several edges of the same pair of interacting proteins. For GENPPI, which could create three edges for a couple of interacting proteins, GEPHI will summarize in only one connection arrow. The *Ok* button will open the interaction network. Initially, the interaction network appearance is a mass, a completely aleatory distribution of vertices and connections. A more elegant view, for instance, is obtained by the options Window->Layout->Yifan Hu. After that, you can see clusters of vertices. Another possibility is to calculate statistics according to the topology. The Window->Statistics open a lateral menu of possible calculations. For instance, the *Network Diameter* option allows us to calculate the Betweenness Centrality and other measures. All the calculated data is available in a spreadsheet-like format in the *Data Laboratory* view. Figure 1 depicts the GENPPI interaction network to genome Ba_G002.
 
 ![GEPHI sample for Ba_G002](https://github.com/santosardr/genppi/raw/master/doc/Ba_G002-GEPHI.png)
 
 ### Cytoscape https://cytoscape.org/
 
-After opening Cytoscape, generally via mouse action, you should ask for File->Import->Networking from File.
-Navigate to the folder used for GENPPI output and load the file "Ba_G002.sif". The Style menu (located at the left lateral menu) allows you to customize your view. To make a graph similar to the GEPHI style, you can change the Shape and Width options to Ellipse and 30, respectively. The Tool->Analyse Network menu allows for several topology measures at once, including Betweenness Centrality. Depending on the number of edges and vertices in your network, running this option can be very time-consuming.
+After opening Cytoscape, generally via mouse action, you should access *File->Import->Networking from File*.
+Navigate to the folder used for GENPPI output and load the file "Ba_G002.sif". The *Style* menu (In general, located at the left lateral menu) allows you to customize your view. To make a graph similar to the GEPHI style, you can change the Shape and Width options to *Ellipse* and 30, respectively. The *Tool->Analyse Network* menu allows for several topology measures at once, including Betweenness Centrality. Running this option can be very time-consuming, depending on the number of edges and vertices in your network. Figure 2 depicts the Cytoscape interaction network to genome Ba_G002.
 
 ![Cytoscape sample for Ba_G002](https://github.com/santosardr/genppi/raw/master/doc/Ba_G002-Cytoscape.png)
 
 ### R https://www.r-project.org/
 
-Install R packages to handle protein interaction networks sometimes require previous dependencies. For instance, On installing the package *graph* demands the install of the installer package of the software provider, the *BiocManager*. This process takes several minutes of downloading and installing:
+Installing R packages to handle protein interaction networks sometimes requires previous dependencies. For instance, on installing the package *graph* demands the installer package of the software provider, the *BiocManager*. This process takes several minutes of downloading and installing:
 
 ```bash
     sudo R
@@ -140,7 +142,7 @@ Install R packages to handle protein interaction networks sometimes require prev
 ```
 
  After finishing the installation process, I will use chapter 11 of "A Little Book of R for Bioinformatics!" written by  Avril Coghlan from the Trust Sanger Institute, Cambridge, to demonstrate how to use GENPPI output in R. 
-The main trick to compute interaction networks by GENPPI in R statistical software is creating a data frame with GENPPI output. Fortunately, Mr. Coghlan provided us an [**R function**](https://a-little-book-of-r-for-bioinformatics.readthedocs.io/en/latest/src/chapter11.html#reading-in-protein-protein-interaction-data-in-r) (click the bold text to navigate) to read a two-column file as an R data frame. The only modification I had to perform here to load my data was at line 8. Instead:
+The main trick to compute interaction networks by GENPPI in R statistical software is creating a data frame with a GENPPI output. Fortunately, Mr. Coghlan provided us an [**R function**](https://a-little-book-of-r-for-bioinformatics.readthedocs.io/en/latest/src/chapter11.html#reading-in-protein-protein-interaction-data-in-r) (click the bold text to navigate), named *makeproteingraph*, to read a two-column file as an R data frame. The only modification I had to perform here to load my data was at line 8. Instead:
 ```R
     protnames <- c(levels(proteins1),levels(proteins2))
 ```
@@ -170,7 +172,7 @@ After you navigate to the top of the web page of "A Little Book of R for Bioinfo
     adj(BaSg,"BUsg_616")
 ```
 Resulting in:
-```text
+```R
     $BUsg_616
     [1] "BUsg_613" "BUsg_573" "BUsg_574" "BUsg_575" "BUsg_576"
 ```
@@ -181,7 +183,7 @@ We can show the degree distribution of the graph:
     sort(mydegrees)
 ```
 Resulting in:
-```text
+```R
     BUsg_018 BUsg_590 BUsg_595 BUsg_019 BUsg_065 BUsg_020 BUsg_591   BUsg20 
     1        1        1        2        2        2        2        2 
     (and so on)
@@ -209,6 +211,12 @@ To Finish, we can plot the network interaction on the screen:
 The result plotting is found in Figure 4.
 
 ![R sample 2](https://github.com/santosardr/genppi/raw/master/doc/BaSg-R2.png)
+
+## Report plotting
+
+The github GENPPI *plotting* folder contains a [**tutorial**](https://github.com/santosardr/genppi/tree/master/plotting) explaining how we can create graphical results from the textual GENPPI reports. Please, check this tutorial for further instructions and examples. In advance, I can tell you that we also created the web page [**bioinformatics.college/genppivisual**](http://www.bioinformatics.college/genppivisual) to facilitate reports generation from files named 'report.txt' located in several GENPPI output folders.
+
+
 
 Thank you for your patients. 
 
