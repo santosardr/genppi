@@ -11,7 +11,7 @@ This is an example of a possible graphical plotting you can do from GENPPI's out
 If you are not interested in continuing this tutorial but do want to see plots 
 from your data, we also offer you a web site for this task.
 
-**<http://bioinformatics.college/genppivisual/>**
+**<http://genppi.facom.ufu.br/>**
 
 All you need is to upload the files named "report.txt" from the data created by 
 GENPPI. The limitation is the size of the files. 

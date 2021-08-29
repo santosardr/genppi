@@ -214,7 +214,7 @@ The result plotting is found in Figure 4.
 
 ## Report plotting
 
-The github GENPPI *plotting* folder contains a [**tutorial**](https://github.com/santosardr/genppi/tree/master/plotting) explaining how we can create graphical results from the textual GENPPI reports. Please, check this tutorial for further instructions and examples. In advance, I can tell you that we also created the web page [**bioinformatics.college/genppivisual**](http://www.bioinformatics.college/genppivisual) to facilitate reports generation from files named 'report.txt' located in several GENPPI output folders.
+The github GENPPI *plotting* folder contains a [**tutorial**](https://github.com/santosardr/genppi/tree/master/plotting) explaining how we can create graphical results from the textual GENPPI reports. Please, check this tutorial for further instructions and examples. In advance, I can tell you that we also created the web page [**genppi.facom.ufu.br**](http://genppi.facom.ufu.br) to facilitate reports generation from files named 'report.txt' located in several GENPPI output folders.
 
 
 
