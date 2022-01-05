@@ -51,7 +51,7 @@ connections, but these should not be in a representative number.
 (iii) A configuration that I use to frequently is this one:
 
 ```bash
-    genppi -ppcomplete -expt fixed -w1 7 -cw1 4 \
+    genppi -ppcomplete -expt fixed -w1 7 -cw1 4\
     -ppdifftolerated 1  -pphistofilter -dir  summary/
 ```
 
@@ -152,7 +152,7 @@ For standard GENPPI run (default parameters), the Ba_G002 has the more extensive
 
 5.2) I will relax the GENPPI parameters to obtain more interactions in the final networks. When looking for conserved phylogenetic profiles, I meant to do such a relaxing parameter telling the GENNPI algorithms to accept as similar proteins those with at least 50% of identity (-aadifflimit 0 -aacheckminlimit 18). Additionally, I will ask for a dynamic expansion in the conserved neighborhood algorithm; it will start with a minimum window size of four to infer conservation (-ws 4). If the algorithm is successful for an initial *ws*, it will expand the window size by four units for subsequent well-success expansions. Besides, I will ask GENPPI for not using any filter for phylogenetic profiles (-ppcomplete).  After all, this is our command:
 ```bash
-    genppi -aadifflimit 0 -aacheckminlimit 18 -expt dynamic -ws 4 \
+    genppi -aadifflimit 0 -aacheckminlimit 18 -expt dynamic -ws 4\
     -ppcomplete -dir test2/
 ```
 Checking the numerical results:
@@ -224,7 +224,7 @@ Installing R packages to handle protein interaction networks sometimes requires 
 ```
 
 ```R
-    if (!requireNamespace("BiocManager", quietly = TRUE)) \
+    if (!requireNamespace("BiocManager", quietly = TRUE))\
     install.packages("BiocManager")
     BiocManager::install("graph", version = "3.8")
     q()
