@@ -1,4 +1,4 @@
-# GENPPI: Ab initio protein interation network generator
+# GENPPI: Ab initio protein interaction network generator
 
 GENPPI is a software written in Common Lisp and compiled with SBCL to create 
 complex networks of predicted proteins from tens or hundreds of genomes.
