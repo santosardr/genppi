@@ -39,6 +39,8 @@ However, you need to install each software separately due to dependencies requir
 + libssl-dev
 + libcairo2-dev
 + libgit2-dev
++ libharfbuzz-dev libfribidi-dev
++ libfreetype6-dev libpng-dev libtiff5-dev libjpeg-dev
 
 2 - Libraries.
 
