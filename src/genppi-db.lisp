@@ -1,3 +1,9 @@
+(ql:quickload "lparallel")
+
+(define-alien-routine "sysconf" long (name int))
+(defconstant +_SC_NPROCESSORS_ONLN+ 84)
+(defun workers() (sysconf +_SC_NPROCESSORS_ONLN+))
+
 (declaim (optimize (speed 3) (debug 0) (safety 0) (space 0)))
 ;;;;Implementation of  GenPPI software for PPI  prediction s
 ;;;;Master's Project in Computer Science - UFU
@@ -303,7 +309,18 @@
   );defun
 ;;------------------------------------------------------------------------------
 
-;;Function block to generate  pangenome
+(defun call-similar-test (j p proteins gp aadifflimit checkpointminlimit)
+    (if (similar-test p (first gp) aadifflimit checkpointminlimit)
+      (progn
+        (setf (third gp) (append (third gp) (list (list j (position p proteins :test #'equalp)))))
+	(if (eq (type-of (second gp)) 'CONS) (second gp) (list (second gp)))
+        )
+      nil
+    );if similar-test                                                                                                                         
+ )
+
+;;Function block to generate pangenome  
+(declaim (ftype (function (fixnum fixnum ) ) pan-genoma-1))
 (defun pan-genoma-1 (aadifflimit checkpointminlimit)
 
   (defparameter *pan-genoma* (make-hash-table :test #'equalp))
@@ -316,6 +333,7 @@
         (perfil-filo (list))
         (laco 0)
         (genomenumber 0)
+	(howmanygenomes)
         )
 
     (declare (type fixnum aadifflimit))
@@ -330,18 +348,23 @@
 
     (loop for j being the hash-keys in *genomas* using (hash-value proteins)
       do (progn
-          (dolist (p proteins)
-                  (dolist (gp pangenoma)
-                          (if (similar-test p (first gp) aadifflimit checkpointminlimit)
-                            (progn
-                             (setf (third gp) (append (third gp) (list (list j (position p proteins :test #'equalp)))))
-                             (setf similares (append similares (list (second gp))))
-                             );
-                            );if similar-test
-                          );dolist pangenome
-                  (setf pangenoma (append pangenoma (list (list p (list j (position p proteins :test #'equalp)) similares))))
-                  (setf similares nil)
-                  );dolist  proteins
+	   (dolist (p proteins)
+	     (setf howmanygenomes (length pangenoma))
+	     (if (> howmanygenomes 0)
+		 (progn
+		 (setf similares (append similares (lparallel:pmap 'list #'call-similar-test
+								   (make-list howmanygenomes :initial-element j)
+								   (make-list howmanygenomes :initial-element p)
+								   (make-list howmanygenomes :initial-element proteins)
+								   pangenoma
+								   (make-list howmanygenomes :initial-element aadifflimit)
+								   (make-list howmanygenomes :initial-element checkpointminlimit)
+								   )))
+		 (setf similares (remove-if (lambda (it) (not (car it))) similares))
+		 ))
+	     (setf pangenoma (append pangenoma (list (list p (list j (position p proteins :test #'equalp)) similares))))
+	     (setf similares nil)
+	     );dolist proteins
           (dotimes (j (ceiling (- (* 60 (/ (/ (* (1+ genomenumber) 100) (hash-table-count *genomas*)) 100)) laco)))
                    (format *query-io* "=")
                    (force-output *query-io*)
@@ -349,7 +372,7 @@
           (setf laco (ceiling (+ laco (- (* 60 (/ (/ (* (1+ genomenumber) 100) (hash-table-count *genomas*)) 100)) laco))))
           (incf genomenumber)
           );progn
-      );loop hash table *genomeas*
+      );loop hash table *genomas*
 
     (setf pangenoma (rest pangenoma))
     (dolist (p pangenoma)
@@ -365,7 +388,7 @@
                       (append (gethash (first (second p)) *perfil-filogenetico*)
                               (list (list (first (first p)) perfil-filo (second (second p))))
                               );append
-                      );setf phylogenetic profile
+                      );setf phylogenetic  profile 
                 );if remove-duplicates
               );unlles
             );dolist pangenome
@@ -381,6 +404,7 @@
   );defun
 ;-------------------------------------------------------------------------------
 
+(declaim (ftype (function (fixnum fixnum fixnum fixnum) ) pan-genoma-2))
 (defun pan-genoma-2 (aadifflimit checkpointminlimit ppaadifflimit ppcheckpointminlimit)
 
   (defparameter *pan-genoma* (make-hash-table :test #'equalp))
@@ -393,6 +417,7 @@
         (perfil-filo-p (list))
         (laco 0)
         (genomenumber 0)
+	(howmanygenomes)
         )
 
     (declare (type fixnum aadifflimit))
@@ -408,27 +433,32 @@
     (force-output *query-io*)
 
     (loop for j being the hash-keys in *genomas* using (hash-value proteins)
-      do (progn
-          (dolist (p proteins)
-                  (dolist (gp pangenoma)
-                          (if (similar-test p (first gp) aadifflimit checkpointminlimit)
-                            (progn
-                             (setf (third gp) (append (third gp) (list (list j (position p proteins :test #'equalp)))))
-                             (setf similares (append similares (list (second gp))))
-                             );
-                            );if similar-test
-                          );dolist pangenome
-                  (setf pangenoma (append pangenoma (list (list p (list j (position p proteins :test #'equalp)) similares))))
-                  (setf similares nil)
-                  )
-          (dotimes (j (ceiling (- (* 60 (/ (/ (* (1+ genomenumber) 100) (hash-table-count *genomas*)) 100)) laco)))
-                   (format *query-io* "=")
-                   (force-output *query-io*)
-                   )
-          (setf laco (ceiling (+ laco (- (* 60 (/ (/ (* (1+ genomenumber) 100) (hash-table-count *genomas*)) 100)) laco))))
-          (incf genomenumber)
-          );dolist  proteins
-      );loop hash table *genomeas*
+	  do (progn
+	       (dolist (p proteins)
+		 (setf howmanygenomes (length pangenoma))
+		 (if (> howmanygenomes 0)
+		     (progn
+		       (setf similares (append similares (lparallel:pmap 'list #'call-similar-test
+									 (make-list howmanygenomes :initial-element j)
+									 (make-list howmanygenomes :initial-element p)
+									 (make-list howmanygenomes :initial-element proteins)
+									 pangenoma
+									 (make-list howmanygenomes :initial-element aadifflimit)
+									 (make-list howmanygenomes :initial-element checkpointminlimit)
+									 )))
+		       (setf similares (remove-if (lambda (it) (not (car it))) similares))
+		       ))
+		 (setf pangenoma (append pangenoma (list (list p (list j (position p proteins :test #'equalp)) similares))))
+		 (setf similares nil)
+		 );dolist proteins                                                       
+	       (dotimes (j (ceiling (- (* 60 (/ (/ (* (1+ genomenumber) 100) (hash-table-count *genomas*)) 100)) laco)))
+		 (format *query-io* "=")
+		 (force-output *query-io*)
+		 )
+	       (setf laco (ceiling (+ laco (- (* 60 (/ (/ (* (1+ genomenumber) 100) (hash-table-count *genomas*)) 100)) laco))))
+	       (incf genomenumber)
+	       );dolist proteins
+	  );loop hash table *genomeas*
 
     (setf pangenoma (rest pangenoma))
     (dolist (p pangenoma)
@@ -442,22 +472,26 @@
 
               ;;Sweeping p-like genes to do new similarity test with p.
               (dolist (similar (third p))
+		(if (and similar (first similar) (second similar))
+		    (progn
                       (if (similar-test (elt (gethash (first (second p)) *genomas*) (second (second p)))
                                         (elt (gethash (first similar) *genomas*) (second similar))
                                         ppaadifflimit ppcheckpointminlimit
                                         )
                         (setf perfil-filo-p (append perfil-filo-p (list (first similar))))
                         );if similar-test
-                      );dolist similar
+		      );progn
+		  );if
+		);dolist similar
 
-              ;;inserting in the profile-phylogenetic hash table
+              ;;inserting in the  profile-phylogenetic hash  table
               (setf perfil-filo-p (remove-duplicates (append (list (first (second p))) perfil-filo-p) :test #'string=))
               (if (> (length perfil-filo-p) 1)
                 (setf (gethash (first (second p)) *perfil-filogenetico*)
                       (append (gethash (first (second p)) *perfil-filogenetico*)
                               (list (list (first (first p)) perfil-filo-p (second (second p))))
                               );append
-                      );setf phylogenetic profile
+                      );setf phylogenetic  profile 
                 );if remove-duplicates
               ;;Resetting the  profile-phylo-p variable 
               (setf perfil-filo-p nil)
@@ -550,7 +584,8 @@
 
           ;;Sweeps the list of similar proteins (pivot-2) to each  pangenome protein (pivot-one)  
           (dolist (pivo-dois (proteina-similares v))
-
+	    (if (and pivo-um pivo-dois (second pivo-um) (second pivo-dois) )
+		(progn
                   ;;Expansion  Loop
                   (loop for i from 1 to w1
                     do (progn
@@ -616,7 +651,9 @@
                           );if gene conservation finding
                         );prong  expansion
                     );End expansion  loop
-                  );End expansion   dolist  
+		  )
+	      )
+	    );End expansion   dolist  
 
           (setf (gethash k *relatorio-vizinhanca-genica*)
                 (make-expansao :localidade pivo-um
@@ -817,8 +854,9 @@
           (setf genomas (list))
 
           (dolist (pivo-dois (proteina-similares v))
-
-                  (block expancao
+	    (if (and pivo-um pivo-dois (second pivo-um) (second pivo-dois) )
+                (progn
+		  (block expancao
                          (setf total-expancoes 0)
                          (setf pos 0)
                          (loop
@@ -908,7 +946,9 @@
                              );window  loop
                            ); loop expanção
                          ); Fim bloco expanção
-                  );similar dolists
+		  )
+	      )
+	  );similar dolists
 
           (setf (gethash k *relatorio-vizinhanca-genica*)
                 (make-expansao :localidade pivo-um
@@ -2954,11 +2994,15 @@
             (format str "~%~%Protein: ~a | Genome: ~a~%" (subseq k (1+ (position #\. k))) (first (proteina-localidade v)))
             (format str "~%Similar proteins:~%~%")
             (dolist (i (proteina-similares v))
+	      (if (and i (first i) (second i))
+		  (progn	      
                     (setf protein (first (elt (gethash (first i) *genomas*)(second i))))
                     (format str "Protein: ~a | Genome: ~a;~%"
                             (subseq protein (1+ (position #\. protein)))
                             (first i))
                     )
+		)
+	      )
             (format str "---------------------------------------------------------------------------------")
 
             (dotimes (j (ceiling (- (* 60 (/ (/ (* (1+ genomenumber) 100) (hash-table-count pan-genoma)) 100)) laco)))
@@ -3011,9 +3055,13 @@
         do (progn
             (format str "~a, ~a," (first (proteina-localidade v)) (subseq k (1+ (position #\. k))))
             (dolist (i (proteina-similares v))
+	      (if (and i (first i) (second i))
+                  (progn	      
                     (setf similar (first (elt (gethash (first i) *genomas*)(second i))))
                     (format str " ~a" (subseq similar (1+ (position #\. similar))))
                     )
+		)
+	      )
             (format str ";~%")
 
             (dotimes (j (ceiling (- (* 60 (/ (/ (* (1+ genomenumber) 100) (hash-table-count pan-genoma)) 100)) laco)))
@@ -3412,6 +3460,7 @@
 
     ;;Loading the files and generating the  pangenome
     (histo-genomas (list-directory workingdir))
+    (setf lparallel:*kernel* (lparallel:make-kernel (if (> 0 (- (workers) 2)) (- (workers) 2) 1)))
     (if (string= pphistofilter "N")
       (pan-genoma-1 aadifflimit aacheckminlimit)
       (if (> (length *genomes-files*) 1)
@@ -3419,7 +3468,7 @@
         (pan-genoma-1 aadifflimit aacheckminlimit)
         )
       )
-
+    (lparallel:end-kernel)
     (unless (> (hash-table-count *pan-genoma*) 0)
       (format t "~%No protein in the pan-genome~%")
       )
@@ -3949,7 +3998,7 @@
                  ((string= parametertag "-version")
                   (progn
                    (terpri)
-                   (format t "GENPPI VERSION: 1.0~%")
+                   (format t "GENPPI VERSION: 1.1~%")
                    (format t "RELEASE NUMBER: 4354980a4dfaede2695e82e525914cead0f2c9ee~%")
                    (format t "REPOSITORY: https://github.com/santosardr/genppi ~%")
                    (terpri)
@@ -5116,7 +5165,7 @@
        (dolist (path (list-directory workingdir))
 
                (if (eql (pathname-type (pathname path)) nil)
-                 ;;If the path represents a directory, increment the number  of  folders in the  .
+                 ;;If the path represents a directory, increment  the number of folders in thedirectory. 
                  (setf directory-num (incf directory-num))
                  ;;If the path is not from a folder, make:
                  (progn
@@ -5130,7 +5179,7 @@
                  );if
                );dolist
        (if (or (= directory-num (length (list-directory workingdir))) (= qtd-arquivos-fasta 0))
-         ;;Se há somente pastas no diretório especificadado, faça:
+         ;;If there are only folders in the specified directory,  do:
          (progn
           (terpri)
           (format t "Warning:~%")
@@ -5176,7 +5225,7 @@
             );if or
 
           (terpri)
-          (format t "GENPPI VERSION: 1.0~%")
+          (format t "GENPPI VERSION: 1.1~%")
           (format t "RELEASE NUMBER: 4354980a4dfaede2695e82e525914cead0f2c9ee~%")
           (format t "REPOSITORY: https://github.com/santosardr/genppi ~%~%")
           (format t "Directory parameter:~%")

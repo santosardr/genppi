@@ -99,7 +99,7 @@
           );loop to read a sequence
 
         (when fastalist;when  fastalist  is  not  nil
-         	;lacque to remove non-amino acid characters (header name)
+         	;loop to remove non-amino acid characters (header name)
         	 (dolist (nonaa nonaalist fastalist)
               	   (setq fastalist (delete nonaa fastalist))
                   );dolist
@@ -3214,7 +3214,7 @@
 
     ;;Loading the files and generating the  pangenome
     (histo-genomas (list-directory workingdir))
-    (setf lparallel:*kernel* (lparallel:make-kernel (- (workers) 2)))
+    (setf lparallel:*kernel* (lparallel:make-kernel (if (> 0 (- (workers) 2)) (- (workers) 2) 1)))
     (if (string= pphistofilter "N")
       (pan-genoma-1 aadifflimit aacheckminlimit)
       (if (> (length *genomes-files*) 1)
