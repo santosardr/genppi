@@ -3214,7 +3214,7 @@
 
     ;;Loading the files and generating the  pangenome
     (histo-genomas (list-directory workingdir))
-    (setf lparallel:*kernel* (lparallel:make-kernel (if (> 0 (- (workers) 2)) (- (workers) 2) 1)))
+    (setf lparallel:*kernel* (lparallel:make-kernel (if (> (- (workers) 2) 0 ) (- (workers) 2) 1)))
     (if (string= pphistofilter "N")
       (pan-genoma-1 aadifflimit aacheckminlimit)
       (if (> (length *genomes-files*) 1)
