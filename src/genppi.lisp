@@ -2464,9 +2464,8 @@
           (setf pesos (loop for i from 1 to ws collecting (list 1 1)))
           (setf genomas (list))
 	  (setf howmany (length (proteina-similares v)))
-	  
-					;                (lparallel:pmap 'list #'execute-expansion-dynamic
-	  (map 'list #'execute-expansion-dynamic 
+	  (lparallel:pmap 'list #'execute-expansion-dynamic
+	  ;(map 'list #'execute-expansion-dynamic 
                  (make-list howmany :initial-element pesos)
                  (make-list howmany :initial-element genomas)
                  (make-list howmany :initial-element pivo-um)
