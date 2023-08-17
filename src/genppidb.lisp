@@ -3483,7 +3483,7 @@
         (pan-genoma-1 aadifflimit aacheckminlimit)
         )
       )
-    (lparallel:end-kernel)
+
     (unless (> (hash-table-count *pan-genoma*) 0)
       (format t "~%No protein in the pan-genome~%")
       )
@@ -3508,7 +3508,7 @@
         (conserved-neighbourhood-dynamic workingdir percentage-cn window-size aadifflimit aacheckminlimit)
         );if
       );unless
-
+    (lparallel:end-kernel)
     (if (string= gene-fusion "Y")
       (setf ppi-gene-fusion (rosetta-stone aadifflimit aacheckminlimit percentage-gf))
       )
