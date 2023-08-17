@@ -508,6 +508,73 @@
     );let
   );defun
 ;-------------------------------------------------------------------------------
+(defun execute-expansion-fixed ( pesos genomas pivo-um pivo-dois w1 aadifflimit checkpointminlimit )
+ (let ( (conservacao)  )
+ 
+	(if (and pivo-um pivo-dois (second pivo-um) (second pivo-dois) )
+	(progn
+		;;Expansion Loop
+		(loop for i from 1 to w1
+		do (progn
+			 (setf conservacao nil)
+			 (cond
+					;condition and the 1 
+				((and (< (+ (second pivo-um) i) (length (gethash (first pivo-um) *genomas*)))
+				(< (+ (second pivo-dois) i) (length (gethash (first pivo-dois) *genomas*))))
+				(if (similar-test (elt (gethash (first pivo-um) *genomas*) (+ (second pivo-um) i))
+					 (elt (gethash (first pivo-dois) *genomas*) (+ (second pivo-dois) i))
+					 aadifflimit checkpointminlimit)(setf conservacao t));if similar-test
+				);and 1 
+					;condition andthe 2 
+				((and (>= (+ (second pivo-um) i) (length (gethash (first pivo-um) *genomas*)))
+				(< (+ (second pivo-dois) i) (length (gethash (first pivo-dois) *genomas*))))
+				(if (similar-test (elt (gethash (first pivo-um) *genomas*) (- (+ (second pivo-um) i) (length (gethash (first pivo-um) *genomas*))))
+					 (elt (gethash (first pivo-dois) *genomas*) (+ (second pivo-dois) i))
+					 aadifflimit checkpointminlimit)(setf conservacao t));if similar-test
+				);and 2 
+					;condition and 3 
+				((and (< (+ (second pivo-um) i) (length (gethash (first pivo-um) *genomas*)))
+				(>= (+ (second pivo-dois) i) (length (gethash (first pivo-dois) *genomas*))))
+				(if (similar-test (elt (gethash (first pivo-um) *genomas*) (+ (second pivo-um) i))
+					 (elt (gethash (first pivo-dois) *genomas*) (- (+ (second pivo-dois) i) (length (gethash (first pivo-dois) *genomas*))))
+					 aadifflimit checkpointminlimit)(setf conservacao t));if similar-test
+				);condition and 3 
+					;condition andthe 4 
+				((and (>= (+ (second pivo-um) i) (length (gethash (first pivo-um) *genomas*)))
+				(>= (+ (second pivo-dois) i) (length (gethash (first pivo-dois) *genomas*))))
+				(if (similar-test (elt (gethash (first pivo-um) *genomas*) (- (+ (second pivo-um) i) (length (gethash (first pivo-um) *genomas*))))
+					 (elt (gethash (first pivo-dois) *genomas*) (- (+ (second pivo-dois) i) (length (gethash (first pivo-dois) *genomas*))))
+					 aadifflimit checkpointminlimit)(setf conservacao t));if similar-test
+				);and 4 
+				);Cond End
+					;Block of actions for when a gene conservation is found in the expansion
+			 (if (eql conservacao t)
+			 (progn
+				;;If there is a conservation found, increase the weights of the conservation report.
+				(incf (first (elt pesos (1- i))))
+				(unless (or (equalp (first pivo-um) (first pivo-dois))
+						(if (find-if #'(lambda (x) (equalp x (list (1- i) (first pivo-dois)))) genomas) t nil)
+						);or
+				 ;;Unless pivot gene 1 is in the same genome as pivot 2 gene, or pivot 2 gene
+				 ;;is in another genome, but preserved gene neighborhood has already been contained
+				 ;;in this genome, make:
+				 ;;The weight for each preserved gene neighborhood between genomes increases
+				 ;;different.
+				 (incf (second (elt pesos (1- i))))
+				 ;;The following is stored the genomes in which the preserved genic neighbourhood was contained so that the weight does not
+				 ;;is incremented again if another conservatised genic neighborhood is contained in that same genome. 
+				 (push (list (1- i) (first pivo-dois)) genomas)
+				 );unless
+				);progn
+				);if gene conservation finding
+			 );prong expansion
+		);End expansion loop
+		)
+		)
+	;End expansion dolist 
+
+	)
+)
 
 ;;Function block to predict  PPI's  by  conserved  gene neighborhood
 (defun conserved-neighbourhood-fixed (workingdir percentage-cn w1 cw1 w2 cw2 w3 cw3 w4 cw4 aadifflimit checkpointminlimit)
@@ -522,7 +589,6 @@
                                              (pivo-um);Variable  to store each  pangenome  pivot  protein
                                              (pesos);Variable to store the forces of interactions between proteins
                                              (qtd-ppi);Variable to account for the number of conserved neighborhood identified
-                                             (conservacao);Boolean variable to observe a gene conservation.
                                              (interaction)
                                              (maior-peso)
                                              (indice-genoma 0)
@@ -531,6 +597,7 @@
                                              (ppi-db)
                                              (laco 0)
                                              (genomenumber 0)
+                                             (howmany)
                                              )
 
     (declare (type single-float percentage-cn))
@@ -581,79 +648,17 @@
           (setf pesos (loop for i from 1 to w1 collecting (list 1 1)))
           (setf genomas (list))
           (setf qtd-ppi 0)
+          (setf howmany (length (proteina-similares v)))
 
           ;;Sweeps the list of similar proteins (pivot-2) to each  pangenome protein (pivot-one)  
-          (dolist (pivo-dois (proteina-similares v))
-	    (if (and pivo-um pivo-dois (second pivo-um) (second pivo-dois) )
-		(progn
-                  ;;Expansion  Loop
-                  (loop for i from 1 to w1
-                    do (progn
-                        (setf conservacao nil)
-                        (cond
-                          ;condition and action 1
-                          ((and (< (+ (second pivo-um) i) (length (gethash (first pivo-um) *genomas*)))
-                                (< (+ (second pivo-dois) i) (length (gethash (first pivo-dois) *genomas*))))
-
-                           (if (similar-test (elt (gethash (first pivo-um) *genomas*) (+ (second pivo-um) i))
-                                             (elt (gethash (first pivo-dois) *genomas*) (+ (second pivo-dois) i))
-                                             aadifflimit checkpointminlimit)(setf conservacao t));if similar-test
-                           );condition and action 1
-
-                          ;condition and action 2
-                          ((and (>= (+ (second pivo-um) i) (length (gethash (first pivo-um) *genomas*)))
-                                (< (+ (second pivo-dois) i) (length (gethash (first pivo-dois) *genomas*))))
-
-                           (if (similar-test (elt (gethash (first pivo-um) *genomas*) (- (+ (second pivo-um) i) (length (gethash (first pivo-um) *genomas*))))
-                                             (elt (gethash (first pivo-dois) *genomas*) (+ (second pivo-dois) i))
-                                             aadifflimit checkpointminlimit)(setf conservacao t));if similar-test
-                           );condition and action 2
-
-                          ;condition and action 3
-                          ((and (< (+ (second pivo-um) i) (length (gethash (first pivo-um) *genomas*)))
-                                (>= (+ (second pivo-dois) i) (length (gethash (first pivo-dois) *genomas*))))
-
-                           (if (similar-test (elt (gethash (first pivo-um) *genomas*) (+ (second pivo-um) i))
-                                             (elt (gethash (first pivo-dois) *genomas*) (- (+ (second pivo-dois) i) (length (gethash (first pivo-dois) *genomas*))))
-                                             aadifflimit checkpointminlimit)(setf conservacao t));if similar-test
-                           );condition and action 3
-
-                          ;condition and action 4
-                          ((and (>= (+ (second pivo-um) i) (length (gethash (first pivo-um) *genomas*)))
-                                (>= (+ (second pivo-dois) i) (length (gethash (first pivo-dois) *genomas*))))
-
-                           (if (similar-test (elt (gethash (first pivo-um) *genomas*) (- (+ (second pivo-um) i) (length (gethash (first pivo-um) *genomas*))))
-                                             (elt (gethash (first pivo-dois) *genomas*) (- (+ (second pivo-dois) i) (length (gethash (first pivo-dois) *genomas*))))
-                                             aadifflimit checkpointminlimit)(setf conservacao t));if similar-test
-                           );condition and action 4
-                          );Cond End
-
-                        ;Block of actions for when a gene conservation is found in the  expansion
-                        (if (eql conservacao t)
-                          (progn
-                           ;;If there is a conservation found, increase the weights of the conservation report.
-                           (incf (first (elt pesos (1- i))))
-
-                           (unless (or (equalp (first pivo-um) (first pivo-dois))
-                                       (if (find-if #'(lambda (x) (equalp x (list (1- i) (first pivo-dois)))) genomas) t nil)
-                                       );or
-                             ;;Unless pivot gene 1 is in the same genome as pivot 2 gene, or pivot 2 gene
-                             ;;is in another genome,  but  preserved gene  neighborhood  has already been
-                             ;;in this genome, make:
-                             ;;The weight for each preserved gene neighborhood    between genomes is increased
-                             ;;different.
-                             (incf (second (elt pesos (1- i))))
-                             ;;The following is stored the genomes in which   the preserved genic neighbourhood was contained so that the weight does  not
-                             ;;is incremented again if another  preserved genic a neighborhood is contained in that same genome.
-                             (push (list (1- i) (first pivo-dois)) genomas)
-                             );unless
-                           );progn
-                          );if gene conservation finding
-                        );prong  expansion
-                    );End expansion  loop
-		  )
-	      )
-	    );End expansion   dolist  
+ (lparallel:pmap 'list #'execute-expansion-fixed
+ (make-list howmany :initial-element pesos)
+ (make-list howmany :initial-element genomas)
+ (make-list howmany :initial-element pivo-um)
+ (proteina-similares v)
+ (make-list howmany :initial-element w1)
+ (make-list howmany :initial-element aadifflimit)
+ (make-list howmany :initial-element checkpointminlimit) )
 
           (setf (gethash k *relatorio-vizinhanca-genica*)
                 (make-expansao :localidade pivo-um
@@ -786,9 +791,108 @@
     (format t "]~%")
     ))
 ;-------------------------------------------------------------------------------
+(defun execute-expansion-dynamic ( pesos genomas pivo-um pivo-dois ws aadifflimit checkpointminlimit )
+  (let ( (conservacao) (pos) (total-expancoes) )
+    (if (and pivo-um pivo-dois (second pivo-um) (second pivo-dois) )
+	(progn
+
+	  (block expancao
+		 (setf total-expancoes 0)
+		 (setf pos 0)
+		 (loop
+		  (setf conservacao nil)
+		  (loop for i from 1 to ws
+			do (progn
+			     (incf total-expancoes)
+			     (if (or (= total-expancoes (1- (length (gethash (first pivo-um) *genomas*))))
+				     (= total-expancoes (1- (length (gethash (first pivo-dois) *genomas*)))))
+				 (return-from expancao))
+			     (cond
+					;condition	1	
+			      ((and (< (+ (second pivo-um) (+ pos i)) (length (gethash (first pivo-um) *genomas*)))
+				    (< (+ (second pivo-dois) (+ pos i)) (length (gethash (first pivo-dois) *genomas*))))
+
+			       (if (similar-test (elt (gethash (first pivo-um) *genomas*) (+ (second pivo-um) (+ pos i)))
+						 (elt (gethash (first pivo-dois) *genomas*) (+ (second pivo-dois) (+ pos i)))
+						 aadifflimit checkpointminlimit)(setf conservacao t))
+			       ); and 1	
+
+					;condition	2	
+			      ((and (>= (+ (second pivo-um) (+ pos i)) (length (gethash (first pivo-um) *genomas*)))
+				    (< (+ (second pivo-dois) (+ pos i)) (length (gethash (first pivo-dois) *genomas*))))
+
+			       (if (similar-test (elt (gethash (first pivo-um) *genomas*) (- (+ (second pivo-um) (+ pos i)) (length (gethash (first pivo-um) *genomas*))))
+						 (elt (gethash (first pivo-dois) *genomas*) (+ (second pivo-dois) (+ pos i)))
+						 aadifflimit checkpointminlimit)(setf conservacao t))
+			       );condition	2	
+
+					;condition	3
+			      ((and (< (+ (second pivo-um) (+ pos i)) (length (gethash (first pivo-um) *genomas*)))
+				    (>= (+ (second pivo-dois) (+ pos i)) (length (gethash (first pivo-dois) *genomas*))))
+
+			       (if (similar-test (elt (gethash (first pivo-um) *genomas*) (+ (second pivo-um) (+ pos i)))
+						 (elt (gethash (first pivo-dois) *genomas*) (- (+ (second pivo-dois) (+ pos i)) (length (gethash (first pivo-dois) *genomas*))))
+						 aadifflimit checkpointminlimit)(setf conservacao t))
+			       ); and 3	
+
+					; and 4	
+			      ((and (>= (+ (second pivo-um) (+ pos i)) (length (gethash (first pivo-um) *genomas*)))
+				    (>= (+ (second pivo-dois) (+ pos i)) (length (gethash (first pivo-dois) *genomas*))))
+
+			       (if (similar-test (elt (gethash (first pivo-um) *genomas*) (- (+ (second pivo-um) (+ pos i)) (length (gethash (first pivo-um) *genomas*))))
+						 (elt (gethash (first pivo-dois) *genomas*) (- (+ (second pivo-dois) (+ pos i)) (length (gethash (first pivo-dois) *genomas*))))
+						 aadifflimit checkpointminlimit)(setf conservacao t))
+			       ); and 4	
+			      );cond
+
+					;Block of actions for when a gene conservation is found in the	expansionof
+			     (if (eql conservacao t)
+				 (progn
+				   ;;Block code for reporting purposes
+				   ;;Expanding the size of the relative-de-conservation if necessary 
+				   (unless (>= (length (split-after pesos (+ pos i))) ws)
+				     (setf pesos (append pesos
+							 (loop for i from 1 to
+							       (- ws (length (split-after pesos (+ pos i))))
+							       collecting (list 1 1))
+							 );append
+					   );setf
+				     );unless
+				   ;;If there is a conservation found, increase the weights of the conservation report.
+				   (incf (first (elt pesos (+ pos (1- i)))))
+				   ;;End of code block for reporting purposes
+
+				   ;;Unless the similar protein is in the same genome as the	protein analyzed, or if the	protein
+				   ;;similar	is in another genome,	but	preserved gene	neighborhood	has already been reported
+				   ;;in this genome, make:
+				   (unless (or (equalp (first pivo-um) (first pivo-dois))
+					       (if (find-if #'(lambda (x) (equalp x (list (+ pos (1- i)) (first pivo-dois)))) genomas) t nil)
+					       );or
+
+				     (incf (second (elt pesos (+ pos (1- i)))))
+				     ;;The following is stored the genomes in which the preserved genic neighbourhood was contained so that the weight does	not
+				     ;;is incremented again if another	conservatised genic a neighborhood is contained in that same genome. 
+				     (push (list (+ pos (1- i)) (first pivo-dois)) genomas)
+				     );unless
+				   (setf pos (+ pos i))
+				   (setf i ws)
+				   );progn
+			       ;;If there is no gene conservation in the	expansion,make:
+			       (if (= i ws); Se já expandiu até o limite da ws, encerra-se a expanção.
+				   (return-from expancao))
+			       );if gene conservation finding
+			     (setf conservacao nil)
+			     );progn
+			);loop janena
+		  ); loop expanção
+		 ); Fim bloco expanção
+	  )
+      )
+    )
+  )
 
 ;;Function two to predict  PPI's  per    conserved gene neighborhood
-(defun conserved-neighbourhood-dynamic (workingdir percentage-cn janela aadifflimit checkpointminlimit)
+(defun conserved-neighbourhood-dynamic (workingdir percentage-cn ws aadifflimit checkpointminlimit)
 
   (defparameter *relatorio-vizinhanca-genica* (make-hash-table :test #'equalp)
     "Tabela hash para armazenar o registro do número de genes conservados
@@ -797,9 +901,7 @@
 
   (let ((ppi (make-hash-table :test #'equalp));Lista para armazenar as PPIs constatadas
                                               (pivo-um);Variable  to store each  pangenome  pivot  protein
-                                              (pos); Variável para guardar a última posição de uma vizinhança gênica conservada
                                               (pesos);Variable to store the forces of interactions between proteins.
-                                              (conservacao);Boolean variable to observe a gene conservation.
                                               (genomas (list));List to assist in weight incrementation
                                               (interaction)
                                               (maior-peso)
@@ -809,11 +911,11 @@
                                               (ppi-db)
                                               (laco 0)
                                               (genomenumber 0)
-                                              (total-expancoes)
+                                              (howmany)
                                               )
 
     (declare (type single-float percentage-cn))
-    (declare (type fixnum janela))
+    (declare (type fixnum ws))
     (declare (type fixnum aadifflimit))
     (declare (type fixnum checkpointminlimit))
     (declare (type fixnum laco))
@@ -850,105 +952,18 @@
     (loop for k being the hash-keys in *pan-genoma* using (hash-value v)
       do (progn
           (setf pivo-um (proteina-localidade v))
-          (setf pesos (loop for i from 1 to janela collecting (list 1 1)))
+          (setf pesos (loop for i from 1 to ws collecting (list 1 1)))
           (setf genomas (list))
-
-          (dolist (pivo-dois (proteina-similares v))
-	    (if (and pivo-um pivo-dois (second pivo-um) (second pivo-dois) )
-                (progn
-		  (block expancao
-                         (setf total-expancoes 0)
-                         (setf pos 0)
-                         (loop
-                           (setf conservacao nil)
-                           (loop for i from 1 to janela
-                             do (progn
-                                 (incf total-expancoes)
-                                 (if (or (= total-expancoes (1- (length (gethash (first pivo-um) *genomas*))))
-                                         (= total-expancoes (1- (length (gethash (first pivo-dois) *genomas*)))))
-                                   (return-from expancao))
-                                 (cond
-                                   ;condition and action 1
-                                   ((and (< (+ (second pivo-um) (+ pos i)) (length (gethash (first pivo-um) *genomas*)))
-                                         (< (+ (second pivo-dois) (+ pos i)) (length (gethash (first pivo-dois) *genomas*))))
-
-                                    (if (similar-test (elt (gethash (first pivo-um) *genomas*) (+ (second pivo-um) (+ pos i)))
-                                                      (elt (gethash (first pivo-dois) *genomas*) (+ (second pivo-dois) (+ pos i)))
-                                                      aadifflimit checkpointminlimit)(setf conservacao t))
-                                    );condition and action 1
-
-                                   ;condition and action 2
-                                   ((and (>= (+ (second pivo-um) (+ pos i)) (length (gethash (first pivo-um) *genomas*)))
-                                         (< (+ (second pivo-dois) (+ pos i)) (length (gethash (first pivo-dois) *genomas*))))
-
-                                    (if (similar-test (elt (gethash (first pivo-um) *genomas*) (- (+ (second pivo-um) (+ pos i)) (length (gethash (first pivo-um) *genomas*))))
-                                                      (elt (gethash (first pivo-dois) *genomas*) (+ (second pivo-dois) (+ pos i)))
-                                                      aadifflimit checkpointminlimit)(setf conservacao t))
-                                    );condition and action 2
-
-                                   ;condition and action 3
-                                   ((and (< (+ (second pivo-um) (+ pos i)) (length (gethash (first pivo-um) *genomas*)))
-                                         (>= (+ (second pivo-dois) (+ pos i)) (length (gethash (first pivo-dois) *genomas*))))
-
-                                    (if (similar-test (elt (gethash (first pivo-um) *genomas*) (+ (second pivo-um) (+ pos i)))
-                                                      (elt (gethash (first pivo-dois) *genomas*) (- (+ (second pivo-dois) (+ pos i)) (length (gethash (first pivo-dois) *genomas*))))
-                                                      aadifflimit checkpointminlimit)(setf conservacao t))
-                                    );condition and action 3
-
-                                   ;condition and action 4
-                                   ((and (>= (+ (second pivo-um) (+ pos i)) (length (gethash (first pivo-um) *genomas*)))
-                                         (>= (+ (second pivo-dois) (+ pos i)) (length (gethash (first pivo-dois) *genomas*))))
-
-                                    (if (similar-test (elt (gethash (first pivo-um) *genomas*) (- (+ (second pivo-um) (+ pos i)) (length (gethash (first pivo-um) *genomas*))))
-                                                      (elt (gethash (first pivo-dois) *genomas*) (- (+ (second pivo-dois) (+ pos i)) (length (gethash (first pivo-dois) *genomas*))))
-                                                      aadifflimit checkpointminlimit)(setf conservacao t))
-                                    );condition and action 4
-                                   );cond
-
-                                 ;Block of shares for when a gene conservation is found in the  expansion
-                                 (if (eql conservacao t)
-                                   (progn
-                                    ;;Code block for reporting purposes
-                                    ;;Expanding the size of the relative-de-conservation if necessary 
-                                    (unless (>= (length (split-after pesos (+ pos i))) janela)
-                                      (setf pesos (append pesos
-                                                          (loop for i from 1 to
-                                                            (- janela (length (split-after pesos (+ pos i))))
-                                                            collecting (list 1 1))
-                                                          );append
-                                            );setf
-                                      );unless
-                                    ;;If there is a conservation found, increase the weights of the conservation report.
-                                    (incf (first (elt pesos (+ pos (1- i)))))
-                                    ;;End of code block for reporting purposes
-
-                                    ;;Unless the similar protein is in the same genome as the protein analyzed, or if the protein
-                                    ;;similar  is in another genome,  but  preserved gene  neighborhood  has already been reported
-                                    ;;in this genome, make:
-                                    (unless (or (equalp (first pivo-um) (first pivo-dois))
-                                                (if (find-if #'(lambda (x) (equalp x (list (+ pos (1- i)) (first pivo-dois)))) genomas) t nil)
-                                                );or
-
-                                      (incf (second (elt pesos (+ pos (1- i)))))
-                                      ;;The following is the genomes in which   the preserved genic neighbourhood was contained so that the weight does  not
-                                      ;;is incremented again if another  preserved genic a neighborhood is contained in that same genome.
-                                      (push (list (+ pos (1- i)) (first pivo-dois)) genomas)
-                                      );unless
-                                    (setf pos (+ pos i))
-                                    (setf i janela)
-                                    );progn
-                                   ;;If there is no gene conservation in the  expansion,make:
-                                   (if (= i janela); Se já expandiu até o limite da janela, encerra-se a expanção.
-                                     (return-from expancao))
-                                   );if gene conservation finding
-                                 (setf conservacao nil)
-                                 );progn
-                             );window  loop
-                           ); loop expanção
-                         ); Fim bloco expanção
-		  )
-	      )
-	  );similar dolists
+ (setf howmany (length (proteina-similares v)))
+ (lparallel:pmap 'list #'execute-expansion-dynamic
+ ;(map 'list #'execute-expansion-dynamic 
+ (make-list howmany :initial-element pesos)
+ (make-list howmany :initial-element genomas)
+ (make-list howmany :initial-element pivo-um)
+ (proteina-similares v)
+ (make-list howmany :initial-element ws)
+ (make-list howmany :initial-element aadifflimit)
+ (make-list howmany :initial-element checkpointminlimit) )
 
           (setf (gethash k *relatorio-vizinhanca-genica*)
                 (make-expansao :localidade pivo-um
@@ -960,7 +975,7 @@
           ;(format t "~a => ~a~%" k pesos)
 
           ;Unless you  have  no gene stored in the expansion  window,make:
-          (unless (= (length pesos) janela)
+          ;(unless (= (length pesos) ws)
             (setf *ppi-identified-cn* t)
             ;;Creating edges between the pivot gene and the other genes in the expansion  window:------------------------------------------------------------------------------------------------------
             (dotimes (i (length pesos))
@@ -1015,7 +1030,7 @@
                          );loop
                        );unless
                      );dotimes
-            );unless
+           ; );unless
 
           ;;Normalizing the weights and taking the  PPI  out of memory and writing to the database.
           (unless (string= (first pivo-um) (elt *genomas-pangenoma* indice-genoma))
