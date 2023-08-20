@@ -4025,8 +4025,8 @@
                  ((string= parametertag "-version")
                   (progn
                    (terpri)
-                   (format t "GENPPI VERSION: 1.1~%")
-                   (format t "RELEASE NUMBER: 55e436b354ba1f3575529aaccc51002e7bf68ee6~%")
+                   (format t "GENPPI VERSION: 1.2~%")
+                   (format t "RELEASE NUMBER: 8c2ced5b7fb22985e3ede0d31c2ca4aa5b082917~%")
                    (format t "REPOSITORY: https://github.com/santosardr/genppi ~%")
                    (terpri)
                    (SB-EXT:EXIT)
@@ -5252,8 +5252,8 @@
             );if or
 
           (terpri)
-          (format t "GENPPI VERSION: 1.1~%")
-          (format t "RELEASE NUMBER: 55e436b354ba1f3575529aaccc51002e7bf68ee6~%")
+          (format t "GENPPI VERSION: 1.2~%")
+          (format t "RELEASE NUMBER: 8c2ced5b7fb22985e3ede0d31c2ca4aa5b082917~%")
           (format t "REPOSITORY: https://github.com/santosardr/genppi ~%~%")
           (format t "Directory parameter:~%")
           (format t "-dir <workingdir> = ~a~%~%" workingdir)
