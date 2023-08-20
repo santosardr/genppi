@@ -1,8 +1,20 @@
 (ql:quickload "lparallel")
 
-(define-alien-routine "sysconf" long (name int))
-(defconstant +_SC_NPROCESSORS_ONLN+ 84)
-(defun workers() (sysconf +_SC_NPROCESSORS_ONLN+))
+(defun get-number-of-processors ()
+  #+darwin
+  (parse-integer (uiop:run-program '("sysctl" "-n" "hw.ncpu") :output '(:string :stripped t)))
+  #+linux
+  (with-open-file (in "/proc/cpuinfo" :direction :input)
+		  (loop for line = (read-line in nil)
+			while line
+			count (search "processor" line)))
+  #+windows
+  (let ((num-processors (sb-ext:posix-getenv "NUMBER_OF_PROCESSORS")))
+    (if num-processors
+	(parse-integer num-processors)
+      4)))
+
+(defun workers() (get-number-of-processors))
 
 (declaim (optimize (speed 3) (debug 0) (safety 0) (space 0)))
 ;;;;Implementation of  GenPPI software for PPI  prediction s
