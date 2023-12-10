@@ -123,17 +123,17 @@ int DescarregaFilaEmArquivo(Fila* F, FILE* arquivo, FILE* log)
 
     while(capsula != NULL)
     {
-        if(capsula->correto)
-        {
-            cabecalho* c = capsula->Cabecalho;
-            sequencia* s = c->aminoacidos;
-            fprintf(arquivo, "%s\n%s\n", c->nome, s->sequencia);
+        if(capsula->correto){
+	    cabecalho* c = capsula->Cabecalho;
+	    sequencia* s = c->aminoacidos;
+	    if(strlen(s->sequencia)>0)
+	      fprintf(arquivo, "%s\n%s\n", c->nome, s->sequencia);
         }
         else
         {
             if(geralog){
                 log = fopen(caminho_arquivo_log, modo_escrita_continua);
-                fprintf(log, "Sequência do cabeçalho %s está incorreta. ERRO!\n", capsula->Cabecalho->nome);
+                fprintf(log, "Sequência %s está incorreta. ERRO!\n", capsula->Cabecalho->nome);
                 fclose(log);
             }
         }
