@@ -3,6 +3,10 @@
 #include <string.h>
 #include "validador.h"
 
+int geralog;
+int geraArqSaida;
+int gerarNomeLog;
+int gerarNomeSaida;
 
 int main(int argc, char *argv[ ])
 {

@@ -4,10 +4,10 @@ typedef struct sequencia {char *sequencia;int tamanho;} sequencia;
 typedef struct cabecalho {char *nome;struct sequencia *aminoacidos;} cabecalho;
 
 typedef struct bloco {cabecalho *Cabecalho;struct bloco *prox; int correto;} no;
-int geralog;
-int geraArqSaida;
-int gerarNomeLog;
-int gerarNomeSaida;
+extern int geralog;
+extern int geraArqSaida;
+extern int gerarNomeLog;
+extern int gerarNomeSaida;
 
 void SetaValores(char* c, char* a, char* b);
 
