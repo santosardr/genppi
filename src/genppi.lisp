@@ -1,4 +1,17 @@
-(ql:quickload "lparallel")
+(unless (find-package :lparallel)
+  (ql:quickload :lparallel))
+
+(unless (find-package :cl-random-forest)
+  (ql:quickload :cl-random-forest))
+
+(unless (find-package :cl-store)
+  (ql:quickload :cl-store ))
+
+(unless (find-package :features)
+  (require :features))
+
+(unless (find-package :random-forest)
+  (require :random-forest))
 
 (defun get-number-of-processors ()
   (or
@@ -133,7 +146,7 @@
 
 ;function that generates  the histogram of proteins,i.e. the frequency distribution 
 ;in which each amino acid appears  in  proteins.
-;(histo-fasta "/home/william/PPIs-Predictor/histograma/sequences.fasta")
+
 (declaim (ftype (function ( pathname ) ) histo-fasta))
 (defun histo-fasta( filename )
   (let  ((multifastalist (read-fasta filename ))
@@ -163,6 +176,140 @@
     histogram; retorna o histograma das proteinas.
     );let
   )
+  ;histo-fasta subtitute
+(declaim (ftype (function ( pathname ) ) features-fasta))  
+(defun features-fasta ( fastafile )
+  (if fastafile
+      (let (
+	    (propensityfile "propensity.dat")
+	    (multifasta)
+	    (multifasta-size)
+	    (listof-sequence-names)
+	    (sequence)
+	    (sequence-name)
+	    (sequence-number 0)
+	    (sequence-histogram)
+	    (pos)
+	    (histoalphabet '( A R N D C Q E G H I L K M F P S T W Y V ))
+	    (alphabet)
+	    (physicochemicals)
+	    (histogram_vector nil)
+	    (histogram_list)
+	    (protein)
+	    (number_list)
+	    ); let pars
+	(if (not (probe-file fastafile))
+	    (progn
+	      (format t "~%~a~%" "ERROR: Amino acid fasta file is missing")
+	      (SB-EXT:EXIT)
+	      )
+	  );if
+	(if (not (probe-file propensityfile ))
+	    (progn
+	      (format t "~%~a~%" "ERROR: Propensity data file is missing")
+	      (SB-EXT:EXIT)
+	      )
+	  );if
+	(multiple-value-bind ( labels props) (features:read-propensity propensityfile)
+			     (setf
+			      labels (append labels
+					     (loop for place in (list "INI" "END" "MID") append
+						   (loop for label in labels collect (concatenate 'string place label))
+						   )
+					     )
+			      alphabet (append histoalphabet labels)
+			      physicochemicals props
+			      multifasta (features:read-fasta fastafile)
+			      multifasta-size (length multifasta)
+			      histogram_vector (make-array (list (+ multifasta-size 1) (+ (length alphabet) 1) ) :initial-element nil)
+			      );setf
+			     );multiple-value-bind
+					;replicates the labels for the begin, middle and end of each protein sequence
+	(loop for fasta in multifasta do
+	      (setf sequence (cadr fasta)
+		    sequence-name (car fasta)
+		    listof-sequence-names (append listof-sequence-names (list sequence-name))
+		    sequence-histogram (features:dohistogram sequence histoalphabet)
+		    );setf
+					;Start sequence processing
+	      (loop for pos from 0 to (- (length histoalphabet) 1) do
+		    (setf (aref histogram_vector (+ sequence-number 1) (+ pos 1)) (nth pos sequence-histogram))
+		    );loop
+	      
+					;after the histogram calculation we start to compute the physicochemicals properties
+	      (setf pos (length histoalphabet))
+	      (loop for physico in physicochemicals do
+		    (setf (aref histogram_vector (+ sequence-number 1) (+ pos 1))
+			  (loop for weigth-list in (list physico) sum
+				(loop for product in (mapcar #'* sequence-histogram weigth-list) sum product)
+				)
+			  )
+		    (incf pos)
+		    )
+					;Computing the number of aminoacids at the region known to host the signal peptide
+	      (setf sequence-histogram (features:dohistogramini sequence histoalphabet))
+	      (loop for physico in physicochemicals do
+		    (setf (aref histogram_vector (+ sequence-number 1) (+ pos 1))
+			  (loop for weigth-list in (list physico) sum
+				(loop for product in (mapcar #'* sequence-histogram weigth-list) sum product)
+				)
+			  )
+		    (incf pos)
+		    )
+					;Computing the number of aminoacids at the end of the protein
+	      (setf sequence-histogram (features:dohistogramend sequence histoalphabet))
+	      (loop for physico in physicochemicals do
+		    (setf (aref histogram_vector (+ sequence-number 1) (+ pos 1))
+			  (loop for weigth-list in (list physico) sum
+				(loop for product in (mapcar #'* sequence-histogram weigth-list) sum product)
+				)
+			  )
+		    (incf pos)
+		    )
+	      
+					;Computing the number of aminoacids at the middle
+	      (setf sequence-histogram (features:dohistogrammid sequence histoalphabet))
+	      (loop for physico in physicochemicals do
+		    (setf (aref histogram_vector (+ sequence-number 1) (+ pos 1))
+			  (loop for weigth-list in (list physico) sum
+				(loop for product in (mapcar #'* sequence-histogram weigth-list) sum product)
+				)
+			  )
+		    (incf pos)
+		    )
+	      
+	      (incf sequence-number)
+	      );loop for multifasta
+	
+					;final pretty print
+					;write the name of the features in the first line of the histogram
+					;In the first line, the first column of features:histogram must be an empty string. 
+					;Starting the names from the second column or x=1
+	(setf (aref histogram_vector 0 0 ) "");empty string
+					;Inserting the attribute names in first line
+	(loop for y from 1 to (length histoalphabet) do
+	      (setf (aref histogram_vector 0 y )
+		    (symbol-name (nth (- y 1) histoalphabet))))
+	(loop for y from (length histoalphabet) to (length alphabet) do
+	      (setf (aref histogram_vector 0 y )
+		    (nth (- y 1) alphabet)))
+	
+					;Inserting the name of the sequences in the first column of all lines
+	(loop for y from 1 to multifasta-size do (setf (aref histogram_vector y 0 ) (nth (- y 1) listof-sequence-names)))
+					;Once we wrote the first row, now we need to write the data concerning each sequence name
+	(setf histogram_list nil)
+	(loop for x from 1 to multifasta-size do
+	      (setf protein (list (aref histogram_vector x 0)))
+	      (setf number_list nil)
+	      (loop for y from 1 to (length alphabet) do
+		    (setf number_list (append number_list (list (if (aref histogram_vector x y) (aref histogram_vector x y) 0)))))
+	      (setf protein (append protein (list number_list)))
+	      (setf histogram_list (append histogram_list (list protein)))
+	      )
+	histogram_list
+	);let
+    );if
+  );defun  
 ;-------------------------------------------------------------------------------
 
 ;Functions to break  a list in a  given
@@ -219,7 +366,7 @@
 
       ;;When the   difference of histogram between  nA(amino n of  seqA) and  nB(amino n of  seqB)
       ;;is <= to the  difference limit tolerated and defined  as  functionparameter (aadifflimit),  
-      ;;means that the two     proteins are similar  to    amino n.  
+      ;;means that the two proteins are similar.  
       ;;increments the checkpoint, which counts the amount of amino acidsthat are  in.  
       ;;of  the tolerated difference. Finally, in  if,checks whether the amount of amino acids
       ;;considered similar, is >= to  checkpointminlimit  (amount of amino acidsconsidered in the analysis).
@@ -309,7 +456,7 @@
                ;Unless the path i is a directory, or is not a fasta file, do:
                (setf *genomes-files* (append *genomes-files* (list (pathname-name (pathname (elt files i))))))
                ;;Generates the histogram for each protein file i.
-               (setf (gethash (pathname-name (pathname (elt files i))) *genomas*) (histo-fasta (elt files i)))
+               (setf (gethash (pathname-name (pathname (elt files i))) *genomas*) (features-fasta (elt files i)))
                );unless
 
              (dotimes (j (ceiling (- (* 60 (/ (/ (* (1+ genomenumber) 100) (length files)) 100)) laco)))
@@ -2824,14 +2971,14 @@
 
       (loop for k being the hash-keys in *pan-genoma* using (hash-value v)
         do (progn
-            (format str "~%~%Protein: ~a | Genome: ~a~%" (subseq k (1+ (position #\. k))) (first (proteina-localidade v)))
+            (format str "~%~%Protein: ~a | Genome: ~a~%" k (first (proteina-localidade v)))
             (format str "~%Similar proteins:~%~%")
             (dolist (i (proteina-similares v))
 	      (if (and i (first i) (second i))
 		  (progn
                     (setf protein (first (elt (gethash (first i) *genomas*)(second i))))
                     (format str "Protein: ~a | Genome: ~a;~%"
-                            (subseq protein (1+ (position #\. protein)))
+                            protein
                             (first i))
                     )
 		)
@@ -2870,13 +3017,13 @@
       (format str "#Columns per row: Genome, Gene, Similar list~%~%")
       (loop for k being the hash-keys in *pan-genoma* using (hash-value v)
         do (progn
-            (format str "~a, ~a," (first (proteina-localidade v)) (subseq k (1+ (position #\. k))))
+            (format str "~a, ~a," (first (proteina-localidade v)) k)
             (dolist (i (proteina-similares v))
 	      (if (and i (first i) (second i))
                   (progn
 
                     (setf similar (first (elt (gethash (first i) *genomas*)(second i))))
-                    (format str " ~a" (subseq similar (1+ (position #\. similar))))
+                    (format str " ~a" similar )
                     )
 		)
 	      )
@@ -2944,7 +3091,7 @@
         do (progn
             (format str "~a, ~a, ~a, ~a,"
                     (first (expansao-localidade v))
-                    (subseq k (1+ (position #\. k)))
+                    k
                     (count-if #'(lambda (x) (> (first x) 1)) (expansao-conservacoes v))
                     (count-if #'(lambda (x) (= (first x) 1)) (expansao-conservacoes v))
                     )
@@ -3155,12 +3302,12 @@
             (format str "~%~%Genome: ~15t~a~%~%" g)
             (dotimes (i (length fusoes))
                      (format str "Fusion ~a => ~15tPPi: ~a -- ~a~%" (1+ i)
-                             (subseq (first(fusion-ppi (elt fusoes i))) (1+ (position #\. (first(fusion-ppi (elt fusoes i))))))
-                             (subseq (third(fusion-ppi (elt fusoes i))) (1+ (position #\. (third(fusion-ppi (elt fusoes i))))))
+                             (first(fusion-ppi (elt fusoes i))) 
+                             (third(fusion-ppi (elt fusoes i))) 
                              );format
                      (dolist (f (fusion-rosetta-stone (elt fusoes i)))
                              (format str "~15tRosetta-stone: ~a in ~a~%"
-                                     (subseq (first f) (1+ (position #\. (first f))))
+                                     (first f)
                                      (second f)
                                      );format
                              );dolist
@@ -3460,8 +3607,8 @@
                          (format str "~S -- ~S [WEIGHT = ~S];~%"
                                  ;(ppi-struct-genea i)
                                  ;(ppi-struct-geneb i)
-                                 (subseq (ppi-struct-genea i) (1+ (position #\. (ppi-struct-genea i))))
-                                 (subseq (ppi-struct-geneb i) (1+ (position #\. (ppi-struct-geneb i))))
+                                 (ppi-struct-genea i)
+                                 (ppi-struct-geneb i)
                                  (ppi-struct-weight i)
                                  );format
                          );dolist
@@ -3489,10 +3636,10 @@
                             (format str "~S~Ccn~C~S~%"
                                     ;(ppi-struct-genea i)
                                     ;(ppi-struct-geneb i)
-                                    (subseq (ppi-struct-genea i) (1+ (position #\. (ppi-struct-genea i))))
+                                    (ppi-struct-genea i)
                                     #\tab
                                     #\tab
-                                    (subseq (ppi-struct-geneb i) (1+ (position #\. (ppi-struct-geneb i))))
+                                    (ppi-struct-geneb i)
                                     );format
                             );dolist
                     );progn
@@ -3507,10 +3654,10 @@
                             (format str "~S~Cpp~C~S~%"
                                     ;(ppi-struct-genea i)
                                     ;(ppi-struct-geneb i)
-                                    (subseq (ppi-struct-genea i) (1+ (position #\. (ppi-struct-genea i))))
+                                    (ppi-struct-genea i)
                                     #\tab
                                     #\tab
-                                    (subseq (ppi-struct-geneb i) (1+ (position #\. (ppi-struct-geneb i))))
+                                    (ppi-struct-geneb i)
                                     );format
                             );dolist
                     );progn
@@ -3525,10 +3672,10 @@
                             (format str "~S~Cgf~C~S~%"
                                     ;(ppi-struct-genea i)
                                     ;(ppi-struct-geneb i)
-                                    (subseq (ppi-struct-genea i) (1+ (position #\. (ppi-struct-genea i))))
+                                    (ppi-struct-genea i)
                                     #\tab
                                     #\tab
-                                    (subseq (ppi-struct-geneb i) (1+ (position #\. (ppi-struct-geneb i))))
+                                    (ppi-struct-geneb i)
                                     );format
                             );dolist
                     );progn
