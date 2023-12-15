@@ -1,18 +1,8 @@
-(unless (find-package :lparallel)
-  (ql:quickload :lparallel))
-
-(unless (find-package :cl-random-forest)
-  (ql:quickload :cl-random-forest))
-
-(unless (find-package :cl-store)
-  (ql:quickload :cl-store ))
-
-(unless (find-package :features)
-  (require :features))
-
-(unless (find-package :random-forest)
-  (require :random-forest))
-
+(unless (find-package :lparallel) (ql:quickload :lparallel))
+(unless (find-package :features) (require :features))
+					;(unless (find-package :cl-random-forest) (ql:quickload :cl-random-forest))
+					;(unless (find-package :cl-store) (ql:quickload :cl-store ))
+					;(unless (find-package :random-forest) (require :random-forest))
 (defun get-number-of-processors ()
   (or
    #+darwin
