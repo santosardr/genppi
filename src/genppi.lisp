@@ -777,6 +777,52 @@
     (length(set-exclusive-or lista1 lista2 :test #'string=))
     )
   )
+  
+(defun ppi-tolerance-null( g ppi percentage-pp pesos-grupos)
+  (let ( (dividendo) (divisor) (peso-grupo) )
+    (setf dividendo (1+ (position-if #'(lambda (x) (= (third g) (third x))) pesos-grupos))
+          divisor (length pesos-grupos)
+          peso-grupo (* (/ dividendo divisor) percentage-pp))
+    (dotimes (i (1- (third g)))
+      (loop for j from (1+ i) to (1- (third g)) do
+	    (progn
+	      (push (make-ppi-struct
+		     :genea (first (elt (second g) i))
+		     :geneb (first (elt (second g) j))
+		     :weight peso-grupo
+		     :position (second (elt (second g) i)))
+		    ppi))
+	    ) )
+    (setf g (nconc g (list peso-grupo)))))
+    
+(defun ppi-tolerance-notnull( g ppi percentage-pp pesos-grupos)
+  (let ( (dividendo) (divisor) (peso-grupo) (diferenca-perfis) ) 
+
+    (setf dividendo (1+ (position-if #'(lambda (x) (= (third (first g)) (third (first x)))) pesos-grupos)))
+    (setf divisor (length pesos-grupos))
+    (setf peso-grupo (* (/ dividendo divisor) percentage-pp))
+    
+    (dotimes (i (1- (third (first g))))
+      (loop for j from (1+ i) to (1- (third (first g)))
+	    do (progn
+		 (push (make-ppi-struct
+			:genea (first (elt (second (first g)) i))
+			:geneb (first (elt (second (first g)) j))
+			:weight peso-grupo
+			:position (second (elt (second (first g)) i)))
+		       ppi)) ) )
+    
+    (dolist (grupo-similar (second g))
+      (setf diferenca-perfis (comparar-perfis (first (first g)) (first grupo-similar)))
+      (dolist (ps (second grupo-similar))
+	(dolist (pg (second (first g)))
+	  (push (make-ppi-struct
+		 :genea (if (< (second pg) (second ps)) (first pg) (first ps) )
+		 :geneb (if (> (second pg) (second ps)) (first pg) (first ps) )
+		 :weight (- peso-grupo (* peso-grupo (/ (/ (* diferenca-perfis 100) (length *genomes-files*)) 100)))
+		 :position (if (< (second pg) (second ps)) (second pg) (second ps) ) )
+		ppi)
+	  ) ) ) ) )    
 
 (declaim (ftype (function (single-float fixnum) ) phylogenetic-profiles-complete))
 (defun phylogenetic-profiles-complete (percentage-pp pptolerance)
@@ -793,13 +839,10 @@
                     (posicao-grupo);Variable to store the position of a group g.
                     ;(number-proteins-max-group);Variável para armezar o número de proteínas do maior grupo.
                     (soma-grupos 0);Variable to store the total number of proteins between groups.
-                    (peso-grupo);Variable to store the weight that will be assigned to proteins in a group g.
-                    (dividendo);Variable that stores the index of a size t group, which is closer to the largest group.
-                    (divisor);Variable that stores the index of the largest group.
-                    (diferenca-perfis);Variable to store the differenceofthe phylogenetic profiles of two groups.
                     (ppi-hash-table (make-hash-table :test #'equalp));Tabela hash para guardar a ppi de cada genoma.
                     (laco 0)
                     (genomenumber 0)
+                    (howmany 0)
                     )
 
     (declare (type hash-table *agrupamento-por-perfis-filos-identicos*))
@@ -809,6 +852,7 @@
     (declare (type single-float percentage-pp))
     (declare (type fixnum laco))
     (declare (type fixnum genomenumber))
+    (declare (type fixnum howmany))
 
     (format t "~%Predicting ppi by phylogenetic profiles;~%")
     (format t "[05 10 15 20 25 30 35 40 45 50 55 60 65 70 75 80 85 90 95 100]%~%")
@@ -854,42 +898,21 @@
                 (setf pesos-grupos (remove-duplicates grupos-identicos :key #'third))
 
                 ;;Generating interactions for each pair of proteins in each group.
-                (dolist (g grupos-identicos)
-
-                        ;;Picking up the group index of size equal to group g in the group weights list.
-                        (setf dividendo (1+ (position-if #'(lambda (x) (= (third g) (third x))) pesos-grupos)))
-
-                        ;;Picking up the index of the most populous group, that is, the last group.
-                        (setf divisor (length pesos-grupos))
-
-                        ;;Calculating the weight of group g based on their position, and the position of the last group (most populous).
-                        (setf peso-grupo (* (/ dividendo divisor) percentage-pp))
-
-                        ;;Generating PPis for all pair of proteins in group g.
-                        (dotimes (i (1- (third g)))
-                            			  (loop for j from (1+ i) to (1- (third g)) do
-                         			       (progn
-                              					 (push (make-ppi-struct
-                                     						:genea (first (elt (second g) i))
-                                     						:geneb (first (elt (second g) j))
-                                     						:weight peso-grupo
-                                     						:position (second (elt (second g) i)))
-                              					       ppi)
-                              					 )
-                                   );loop-dotimes
-                                 );dotimes
-                        (setf g (nconc g (list peso-grupo)))
-                        );dolist  identical groups
+		      (setf howmany (length grupos-identicos))
+		      (lparallel:pmap 'list #'ppi-tolerance-null
+		      	grupos-identicos
+		      	(make-list howmany :initial-element ppi)
+		      	(make-list howmany :initial-element percentage-pp)
+		      	(make-list howmany :initial-element pesos-grupos)
+		      	)
                 );progn
                );condition and action 1
 
               ;;If the user wants to consider similar profiles
               ((> pptolerance 0)
                (progn
-
                 ;;Ordering groups by size, from largest to smallest.
                 (setf grupos-identicos (sort grupos-identicos #'> :key #'third))
-
                 ;;By adding to a group g, all groups similar to group g.
                 (dotimes (i (1- (length grupos-identicos)))
                          (setf grupos-similares  (append grupos-similares (list (list (elt grupos-identicos i) (list )))))
@@ -925,51 +948,15 @@
                 (setf pesos-grupos (remove-duplicates grupos-similares :key #'(lambda (x) (third (first x)))))
 
                 ;;Sweeping the groups formed to create edges between  identical  and  similar proteins.
-                (dolist (g grupos-similares)
 
-                        ;;Picking up the group index of size equal to group g in the group weights list.
-                        (setf dividendo (1+ (position-if #'(lambda (x) (= (third (first g)) (third (first x)))) pesos-grupos)))
-
-                        ;;Picking up the index of the most populous group, i.e. the last group.
-                        (setf divisor (length pesos-grupos))
-
-                        ;;Calculating group g weight based on their position, and position of the last group (most populous).
-                        (setf peso-grupo (* (/ dividendo divisor) percentage-pp))
-
-                        ;;Creating edges between proteins with profiles identical to each other.
-                        (dotimes (i (1- (third (first g))))
-                                 (loop for j from (1+ i) to (1- (third (first g)))
-                           				    do (progn
-                                 					 (push (make-ppi-struct
-                                        						:genea (first (elt (second (first g)) i))
-                                        						:geneb (first (elt (second (first g)) j))
-                                        						:weight peso-grupo
-                                        						:position (second (elt (second (first g)) i)))
-                                 					       ppi)
-                                       );progn-do
-                                   );loop j
-                                 );dotimes i
-
-                        ;;Sweeping protein groups with profiles similar to the profile of the protein group with identical profiles.
-                        (dolist (grupo-similar (second g))
-                                ;Calculando a difença entre os perfis.
-                                (setf diferenca-perfis (comparar-perfis (first (first g)) (first grupo-similar)))
-                                ;;Sweeping the proteins of a group with a similar profile.
-                                (dolist (ps (second grupo-similar))
-                                        ;;Sweeping proteins   of identical profiles of a group g.
-                                        (dolist (pg (second (first g)))
-                                         					  ;;Creating  an interaction.
-                                          					 (push (make-ppi-struct
-                                                 						:genea (if (< (second pg) (second ps)) (first pg) (first ps) )
-                                                 						:geneb (if (> (second pg) (second ps)) (first pg) (first ps) )
-                                                 						:weight (- peso-grupo (* peso-grupo (/ (/ (* diferenca-perfis 100) (length *genomes-files*)) 100)))
-                                                 						:position (if (< (second pg) (second ps))  (second pg) (second ps) ) )
-                                          					       ppi)
-                                                );dolist pg
-                                        );dolist ps
-                                );similar group-dolist
-                        );similar group dolists
-                );progn
+		     (setf howmany (length grupos-identicos))
+		     (lparallel:pmap 'list #'ppi-tolerance-notnull
+				     grupos-similares
+				     (make-list howmany :initial-element ppi)
+				     (make-list howmany :initial-element percentage-pp)
+				     (make-list howmany :initial-element pesos-grupos)
+				     )
+				     );progn
                );condition and action 2
               );cond
             );unless
@@ -3411,7 +3398,7 @@
               );if
             );setf
       );unless
-    (lparallel:end-kernel)
+
     (cond
       ;;Start  of Condition and Action 1
       ((and (string= ppcn "Y") (> (hash-table-count *genomas*) 1))
@@ -3496,7 +3483,7 @@
        (setf ppi-phylogenetic-profiles (phylogenetic-profiles-delete-perfil percentage-pp ppdifftolerated profiles))
        );End Condition and Action 7
       );cond
-
+    (lparallel:end-kernel)
     ;;If the user has chosen to run gene fusion
     (if (string= gene-fusion "Y")
       (setf ppi-gene-fusion (rosetta-stone aadifflimit aacheckminlimit percentage-gf))
