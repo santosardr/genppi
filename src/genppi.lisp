@@ -793,7 +793,9 @@
 		     :position (second (elt (second g) i)))
 		    ppi))
 	    ) )
-    (setf g (nconc g (list peso-grupo)))))
+    (setf g (nconc g (list peso-grupo)))
+    ppi
+    ))
     
 (defun ppi-tolerance-notnull( g ppi percentage-pp pesos-grupos)
   (let ( (dividendo) (divisor) (peso-grupo) (diferenca-perfis) ) 
@@ -822,7 +824,8 @@
 		 :weight (- peso-grupo (* peso-grupo (/ (/ (* diferenca-perfis 100) (length *genomes-files*)) 100)))
 		 :position (if (< (second pg) (second ps)) (second pg) (second ps) ) )
 		ppi)
-	  ) ) ) ) )    
+	  ) ) )
+    ppi) )    
 
 (declaim (ftype (function (single-float fixnum) ) phylogenetic-profiles-complete))
 (defun phylogenetic-profiles-complete (percentage-pp pptolerance)
@@ -898,13 +901,14 @@
                 (setf pesos-grupos (remove-duplicates grupos-identicos :key #'third))
 
                 ;;Generating interactions for each pair of proteins in each group.
-		      (setf howmany (length grupos-identicos))
-		      (lparallel:pmap 'list #'ppi-tolerance-null
-		      	grupos-identicos
-		      	(make-list howmany :initial-element ppi)
-		      	(make-list howmany :initial-element percentage-pp)
-		      	(make-list howmany :initial-element pesos-grupos)
-		      	)
+		(setf howmany (length grupos-identicos))
+		(setf ppi (apply #'append
+				 (lparallel:pmap 'list #'ppi-tolerance-null
+						 grupos-identicos
+						 (make-list howmany :initial-element ppi)
+						 (make-list howmany :initial-element percentage-pp)
+						 (make-list howmany :initial-element pesos-grupos)
+						 )))
                 );progn
                );condition and action 1
 
@@ -948,15 +952,14 @@
                 (setf pesos-grupos (remove-duplicates grupos-similares :key #'(lambda (x) (third (first x)))))
 
                 ;;Sweeping the groups formed to create edges between  identical  and  similar proteins.
-
-		     (setf howmany (length grupos-identicos))
-		     (lparallel:pmap 'list #'ppi-tolerance-notnull
-				     grupos-similares
-				     (make-list howmany :initial-element ppi)
-				     (make-list howmany :initial-element percentage-pp)
-				     (make-list howmany :initial-element pesos-grupos)
-				     )
-				     );progn
+		(setf howmany (length grupos-identicos)
+		      ppi (apply #'append (lparallel:pmap 'list #'ppi-tolerance-notnull
+							  grupos-similares
+							  (make-list howmany :initial-element ppi)
+							  (make-list howmany :initial-element percentage-pp)
+							  (make-list howmany :initial-element pesos-grupos)
+							  )))
+		);progn
                );condition and action 2
               );cond
             );unless
