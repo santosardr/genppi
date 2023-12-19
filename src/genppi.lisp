@@ -1618,13 +1618,10 @@
 
 (defun phylogenetic-profiles-delete-clusters (percentage-pp pptolerance grouplimit)
   (let ((ppi (list));;List to   store the interactions created.
-	(ppi-by-score (list));List for storing  PPIs  by  score.
 	(grupos-identicos (list));List for storing protein groups with identical profiles.
 	(grupos-similares (list));List for storing protein groups with identical and similar profiles.
 	(pesos-grupos (list))
 	(posicao-grupo);Variable to store the position of a group g.
-					;(number-proteins-max-group);Variável para armezar o número de proteínas do maior grupo.
-	(soma-grupos 0);Variable to store the total number of proteins between groups.
 	(ppi-hash-table (make-hash-table :test #'equalp));Tabela hash para guardar a ppi de cada genoma.
 	(laco 0)
 	(genomenumber 0)
@@ -1634,7 +1631,6 @@
     (declare (type single-float percentage-pp))
     (declare (type fixnum laco))
     (declare (type fixnum genomenumber))
-    (declare (type fixnum pptolerance))
     (declare (type fixnum grouplimit))
     (declare (type fixnum howmany))
 
