@@ -166,12 +166,25 @@
     histogram; retorna o histograma das proteinas.
     );let
   )
-  ;histo-fasta subtitute
+					;histo-fasta subtitute
+(defun propensity-data()
+  (list (list "BASIC" "ACID" "POLAR" "NONPOLAR" "MASS" "MASSMR" "PARJ860101" "JOND750101" "EISD840101" "JURD980101")
+	(list 
+	 (list 0.0 1.0 0.0 0.0 0.0 0.0 0.0 0.0 1.0 0.0 0.0 1.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0)
+	 (list 0.0 0.0 0.0 1.0 0.0 0.0 1.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0)
+	 (list 0.0 0.0 1.0 0.0 1.0 1.0 0.0 1.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 1.0 1.0 0.0 1.0 0.0)
+	 (list 1.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 1.0 1.0 0.0 1.0 1.0 1.0 0.0 0.0 1.0 0.0 1.0)
+	 (list 89.09 174.2 132.12 133.1 121.16 146.15 147.13 75.07 155.16 131.18 131.18 146.19 149.21 165.19 115.13 105.09 119.12 204.23 181.19 117.15)
+	 (list 71.08 156.19 114.1 115.09 103.14 128.13 129.11 57.05 137.14 113.16 113.16 128.17 131.2 147.18 97.12 87.08 101.1 186.21 163.17 99.13)
+	 (list 2.1 4.2 7.0 10.0 1.4 6.0 7.8 5.7 2.1 -8.0 -9.2 5.7 -4.2 -9.2 2.1 6.5 5.2 -10.0 -1.9 -3.7)
+	 (list 0.87 0.85 0.09 0.66 1.52 0.0 0.67 0.1 0.87 3.15 2.17 1.64 1.67 2.87 2.77 0.07 0.07 3.77 2.67 1.87)
+	 (list 0.25 -1.76 -0.64 -0.72 0.04 -0.69 -0.62 0.16 -0.4 0.73 0.53 -1.1 0.26 0.61 -0.07 -0.26 -0.18 0.37 0.02 0.54)
+	 (list 1.1 -5.1 -3.5 -3.6 2.5 -3.68 -3.2 -0.64 -3.2 4.5 3.8 -4.11 1.9 2.8 -1.9 -0.5 -0.7 -0.46 -1.3 4.2)) ))
+
 (declaim (ftype (function ( pathname ) ) features-fasta))  
 (defun features-fasta ( fastafile )
   (if fastafile
       (let (
-	    (propensityfile "propensity.dat")
 	    (multifasta)
 	    (multifasta-size)
 	    (listof-sequence-names)
@@ -187,6 +200,8 @@
 	    (histogram_list)
 	    (protein)
 	    (number_list)
+	    (proplabels)
+	    (props)
 	    ); let pars
 	(if (not (probe-file fastafile))
 	    (progn
@@ -194,27 +209,20 @@
 	      (SB-EXT:EXIT)
 	      )
 	  );if
-	(if (not (probe-file propensityfile ))
-	    (progn
-	      (format t "~%~a~%" "ERROR: Propensity data file is missing")
-	      (SB-EXT:EXIT)
-	      )
-	  );if
-	(multiple-value-bind ( labels props) (features:read-propensity propensityfile)
-			     (setf
-			      labels (append labels
-					     (loop for place in (list "INI" "END" "MID") append
-						   (loop for label in labels collect (concatenate 'string place label))
-						   )
-					     )
-			      alphabet (append histoalphabet labels)
-			      physicochemicals props
-			      multifasta (features:read-fasta fastafile)
-			      multifasta-size (length multifasta)
-			      histogram_vector (make-array (list (+ multifasta-size 1) (+ (length alphabet) 1) ) :initial-element nil)
-			      );setf
-			     );multiple-value-bind
-					;replicates the labels for the begin, middle and end of each protein sequence
+	(setf proplabels (nth 0 (propensity-data))
+	      props (nth 1 (propensity-data))
+	      proplabels (append proplabels
+				 (loop for place in (list "INI" "END" "MID") append
+				       (loop for label in proplabels collect (concatenate 'string place label))
+				       )
+				 )
+	      alphabet (append histoalphabet proplabels)
+	      physicochemicals props
+	      multifasta (features:read-fasta fastafile)
+	      multifasta-size (length multifasta)
+	      histogram_vector (make-array (list (+ multifasta-size 1) (+ (length alphabet) 1) ) :initial-element nil)
+	      );setf
+					;replicates the proplabels for the begin, middle and end of each protein sequence
 	(loop for fasta in multifasta do
 	      (setf sequence (cadr fasta)
 		    sequence-name (car fasta)
@@ -1616,10 +1624,9 @@
     ))
 ;-------------------------------------------------------------------------------
 
-(defun phylogenetic-profiles-delete-clusters (percentage-pp pptolerance grouplimit)
+(defun phylogenetic-profiles-delete-clusters (percentage-pp grouplimit)
   (let ((ppi (list));;List to   store the interactions created.
 	(grupos-identicos (list));List for storing protein groups with identical profiles.
-	(grupos-similares (list));List for storing protein groups with identical and similar profiles.
 	(pesos-grupos (list))
 	(posicao-grupo);Variable to store the position of a group g.
 	(ppi-hash-table (make-hash-table :test #'equalp));Tabela hash para guardar a ppi de cada genoma.
@@ -1700,7 +1707,6 @@
 
 	       ;;Reconfiguring the variables.
 	       (setf grupos-identicos nil)
-	       (setf grupos-similares nil)
 	       (setf ppi nil)
 
 	       (dotimes (j (ceiling (- (* 60 (/ (/ (* (1+ genomenumber) 100) (hash-table-count *perfil-filogenetico*)) 100)) laco)))
@@ -3140,7 +3146,7 @@
 
       ;Beginning  of Condition and Action 6
       ((and (string= ppdeletegroup "Y") (> (hash-table-count *genomas*) 1))
-       (setf ppi-phylogenetic-profiles (phylogenetic-profiles-delete-clusters percentage-pp ppdifftolerated grouplimit))
+       (setf ppi-phylogenetic-profiles (phylogenetic-profiles-delete-clusters percentage-pp grouplimit))
        );End Condition and Action 6
 
       ;Beginning  of Condition and Action 7
