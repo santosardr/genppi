@@ -952,15 +952,15 @@
  (setf pesos-grupos (remove-duplicates grupos-identicos :key #'third))
 
  ;;Generating interactions for each pair of proteins in each group.
- (setf howmany (length grupos-identicos)
- ppi (apply #'append
+ (setf howmany (length grupos-identicos))
+ (if (> howmany 0) (setf ppi (apply #'append
  (lparallel:pmap 'list #'ppi-tolerance-null
  grupos-identicos
  (make-list howmany :initial-element ppi)
  (make-list howmany :initial-element percentage-pp)
  (make-list howmany :initial-element pesos-grupos)
  (make-list howmany :initial-element :END)
- )))
+ ))))
  );progn
  );condition and action 1
 
@@ -1004,13 +1004,14 @@
  (setf pesos-grupos (remove-duplicates grupos-similares :key #'(lambda (x) (third (first x)))))
 
  ;;Sweeping the groups formed to create edges between identical and similar proteins.
- (setf howmany (length grupos-similares)
+ (setf howmany (length grupos-similares))
+ (if (> howmany 0) (setf 
  ppi (apply #'append (lparallel:pmap 'list #'ppi-tolerance-notnull
  grupos-similares
  (make-list howmany :initial-element ppi)
  (make-list howmany :initial-element percentage-pp)
  (make-list howmany :initial-element pesos-grupos)
- )))
+ ))))
  );progn
  );condition and action 2
  );cond
@@ -1225,13 +1226,14 @@
  (setf pesos-grupos (remove-duplicates grupos-similares :key #'(lambda (x) (third (first x)))))
 
  ;;Sweeping the groups formed to create edges between identical and similar proteins.
- (setf howmany (length grupos-similares)
+ (setf howmany (length grupos-similares))
+ (if (> howmany 0) (setf 
  ppi (apply #'append (lparallel:pmap 'list #'ppi-tolerance-notnull
  grupos-similares
  (make-list howmany :initial-element ppi)
  (make-list howmany :initial-element percentage-pp)
  (make-list howmany :initial-element pesos-grupos)
- )))
+ ))))
  );progn
  );condition and action 2
  );cond
@@ -1323,11 +1325,12 @@
 
  ;;Generating interactions for each pair of proteins in each group.
  (setf howmany (length grupos-identicos))
+ (if (> howmany 0)
  (lparallel:pmap 'list #'ppi-tolerance-null-by-score
  grupos-identicos
  (make-list howmany :initial-element percentage-pp)
  (make-list howmany :initial-element pesos-grupos)
- )
+ ))
 
  (setf *phylogenetic-profiles-ppi-by-score* (remove-duplicates *phylogenetic-profiles-ppi-by-score* :test #'= :key #'first))
 
@@ -1388,11 +1391,12 @@
 
  ;;Sweeping the groups formed to create edges between identical and similar proteins.
  (setf howmany (length grupos-similares))
+ (if (> howmany 0)
  (lparallel:pmap 'list #'ppi-tolerance-notnull-by-score
  grupos-similares
  (make-list howmany :initial-element percentage-pp)
  (make-list howmany :initial-element pesos-grupos)
- )
+ ))
 
 
  (setf *phylogenetic-profiles-ppi-by-score* (remove-duplicates *phylogenetic-profiles-ppi-by-score* :test #'= :key #'first))
@@ -1521,14 +1525,14 @@
  (setf pesos-grupos (remove-duplicates grupos-identicos :key #'third))
 
  ;;Generating interactions for each pair of proteins in each group.
- (setf howmany (length grupos-identicos)
- ppi (apply #'append
+ (setf howmany (length grupos-identicos))
+ (if (> howmany 0) (setf ppi (apply #'append
  (lparallel:pmap 'list #'ppi-tolerance-null
  grupos-identicos
  (make-list howmany :initial-element ppi)
  (make-list howmany :initial-element percentage-pp)
  (make-list howmany :initial-element pesos-grupos)
- ))
+ )))
  ));progn
  );condition and action 1
 
@@ -1568,13 +1572,14 @@
  (setf pesos-grupos (remove-duplicates grupos-similares :key #'(lambda (x) (third (first x)))))
 
  ;;Sweeping the groups formed to create edges between identical and similar proteins.
- (setf howmany (length grupos-similares)
+ (setf howmany (length grupos-similares))
+ (if (> howmany 0) (setf 
  ppi (apply #'append (lparallel:pmap 'list #'ppi-tolerance-notnull
  grupos-similares
  (make-list howmany :initial-element ppi)
  (make-list howmany :initial-element percentage-pp)
  (make-list howmany :initial-element pesos-grupos)
- )))
+ ))))
  );progn
  );condition and action 2
  );cond
@@ -1666,15 +1671,15 @@
  (setf pesos-grupos (remove-duplicates grupos-identicos :key #'third))
 
  ;;Generating interactions for each pair of proteins in each group.
- (setf howmany (length grupos-identicos)
- ppi (apply #'append
+ (setf howmany (length grupos-identicos))
+ (if (> howmany 0) (setf ppi (apply #'append
  (lparallel:pmap 'list #'ppi-tolerance-null
  grupos-identicos
  (make-list howmany :initial-element ppi)
  (make-list howmany :initial-element percentage-pp)
  (make-list howmany :initial-element pesos-grupos)
- ))
- ));progn
+ ))))
+ );progn
  );unless
 
  ;;If any PPI has beenpredicted, the PPI identifier is changed to true.
@@ -1787,15 +1792,15 @@
  (setf pesos-grupos (remove-duplicates grupos-identicos :key #'third))
 
  ;;Generating interactions for each pair of proteins of each group.
- (setf howmany (length grupos-identicos)
- ppi (apply #'append
+ (setf howmany (length grupos-identicos))
+ (if (> howmany 0) (setf ppi (apply #'append
  (lparallel:pmap 'list #'ppi-tolerance-null
  grupos-identicos
  (make-list howmany :initial-element ppi)
  (make-list howmany :initial-element percentage-pp)
  (make-list howmany :initial-element pesos-grupos)
- ))
- ));progn
+ ))))
+ );progn
  );condition and action 1
 
  ;;If the user wants to consider similar profiles
@@ -1834,13 +1839,13 @@
  (setf pesos-grupos (remove-duplicates grupos-similares :key #'(lambda (x) (third (first x)))))
 
  ;;Sweeping the groups formed to create edges between identical and similar proteins.
- (setf howmany (length grupos-similares)
- ppi (apply #'append (lparallel:pmap 'list #'ppi-tolerance-notnull
+ (setf howmany (length grupos-similares))
+ (if (> howmany 0) (setf ppi (apply #'append (lparallel:pmap 'list #'ppi-tolerance-notnull
  grupos-similares
  (make-list howmany :initial-element ppi)
  (make-list howmany :initial-element percentage-pp)
  (make-list howmany :initial-element pesos-grupos)
- )))
+ ))))
 
  );progn
  );condition and action 2
@@ -1990,7 +1995,7 @@
  (setf genomas (list))
  (setf qtd-ppi 0)
  (setf howmany (length (proteina-similares v)))
-
+ (if (> howmany 0)
  ;;Sweeps the list ofprotein s similar(pivot-2) to each pangenome protein (pivot-one)
  (lparallel:pmap 'list #'execute-expansion-fixed
  (make-list howmany :initial-element pesos)
@@ -1999,7 +2004,7 @@
  (proteina-similares v)
  (make-list howmany :initial-element w1)
  (make-list howmany :initial-element aadifflimit)
- (make-list howmany :initial-element checkpointminlimit) )
+ (make-list howmany :initial-element checkpointminlimit) ))
 
  (setf (gethash k *relatorio-vizinhanca-genica*)
  (make-expansao :localidade pivo-um
@@ -2238,7 +2243,8 @@
  (setf pesos (loop for i from 1 to ws collecting (list 1 1)))
  (setf genomas (list))
  (setf howmany (length (proteina-similares v)))
- (lparallel:pmap 'list #'execute-expansion-dynamic
+ (if (> howmany 0)
+  (lparallel:pmap 'list #'execute-expansion-dynamic
  ;(map 'list #'execute-expansion-dynamic
  (make-list howmany :initial-element pesos)
  (make-list howmany :initial-element genomas)
@@ -2246,7 +2252,7 @@
  (proteina-similares v)
  (make-list howmany :initial-element ws)
  (make-list howmany :initial-element aadifflimit)
- (make-list howmany :initial-element checkpointminlimit) )
+ (make-list howmany :initial-element checkpointminlimit) ))
 
  (setf (gethash k *relatorio-vizinhanca-genica*)
  (make-expansao :localidade pivo-um
