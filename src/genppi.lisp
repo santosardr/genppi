@@ -1,8 +1,8 @@
 (unless (find-package :lparallel) (ql:quickload :lparallel))
 (unless (find-package :features) (require :features))
- ;(unless (find-package :cl-random-forest) (ql:quickload :cl-random-forest))
- ;(unless (find-package :cl-store) (ql:quickload :cl-store ))
- ;(unless (find-package :random-forest) (require :random-forest))
+(unless (find-package :cl-random-forest) (ql:quickload :cl-random-forest))
+(unless (find-package :cl-store) (ql:quickload :cl-store ))
+
 (defun get-number-of-processors ()
  (or
  #+darwin
@@ -61,6 +61,8 @@
 (defparameter *ppi-identified-gf* nil
  "Variável global usada na função genppi para dizer se foi
  constatado ppi por fusão gênica conservada ou não")
+(defparameter *forest* nil
+ "Variável global para armazenar o árvore de random forest treinanda")
 
 (defstruct ppi-struct (genea "" :type string) (geneb "" :type string ) (weight 0.0 :type short-float ) (position 0 :type integer))
 ;;------------------------------------------------------------------------------
@@ -304,6 +306,13 @@
  );defun
  ;-------------------------------------------------------------------------------
 
+
+;; Deserialize the `forest` object
+(defun deserialize-forest (filename)
+  (with-open-file (stream filename :direction :input 
+  :element-type '(unsigned-byte 8))
+  (cl-store:restore stream)))
+
 ;;Functions to break a list in a given
 (declaim (ftype (function ( cons fixnum ) ) split-up-to))
 (defun split-up-to (lista pos)
@@ -340,8 +349,8 @@
  ;-------------------------------------------------------------------------------
 
 ;;Function to test whether two proteins are similar via histogram
-(declaim (ftype (function ( cons cons fixnum fixnum ) ) similar-test))
-(defun similar-test( seqA seqB aadifflimit checkpointminlimit )
+(declaim (ftype (function ( cons cons fixnum fixnum ) ) similar-test-ori))
+(defun similar-test-ori( seqA seqB aadifflimit checkpointminlimit )
 
  (declare (type cons seqA))
  (declare (type cons seqB))
@@ -364,6 +373,26 @@
  (if (>= checkpoint checkpointminlimit) t nil)
  );let
  )
+
+(defun similar-test( seqA seqB &optional aadifflimit checkpointminlimit )
+  (declare (type cons seqA))
+  (declare (type cons seqB))
+					;  (print (length (cadr seqA)))
+					;  (print (length (cadr seqB)))
+					;  (print (append (cadr seqA) (cadr seqB)))
+  (if (and (> (length (cadr seqA)) 0) (> (length (cadr seqB)) 0))
+      (let ((test-result 0) (datamatrixAB nil) (seqAsf) (seqBsf) )
+	(setf seqAsf (mapcar #'(lambda (x) (float x 0.0s0)) (cadr seqA))
+	      seqBsf (mapcar #'(lambda (x) (float x 0.0s0)) (cadr seqB))
+	      datamatrixAB (make-array (list 1 (* 2 (length seqAsf) ))
+				       :element-type 'single-float
+				       :initial-contents (list (append seqAsf seqBsf)))
+	      test-result (CL-RANDOM-FOREST::predict-forest *forest* datamatrixAB 0))
+	(if (zerop test-result) nil t)
+	)
+      nil
+      )
+  )
  ;-------------------------------------------------------------------------------
 
 ;;Block of functions to read files from a directory
@@ -4640,6 +4669,15 @@
  (format t "-aacheckminlimit <minimum amount of amino acids to check> 25 (default)~%")
  (format t "-aacheckminlimit <minimum amount of amino acids to check> ~a~%" aacheckminlimit)
  )
+ 
+ (if (not (probe-file "model.dat"))
+     (progn
+       (format t "~%~a~%" "ERROR: Random-Forest trained model (model.dat) is missing")
+       (SB-EXT:EXIT)
+       )
+     (setf *forest* (deserialize-forest "model.dat"))
+     );if
+ 
  (terpri)
  (terpri)
  (format t "Making ppi prediction, please wait.~%")
