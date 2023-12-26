@@ -388,7 +388,7 @@
 				       :element-type 'single-float
 				       :initial-contents (list (append seqAsf seqBsf)))
 	      test-result (CL-RANDOM-FOREST::predict-forest *forest* datamatrixAB 0))
-	(if (zerop test-result) nil t)
+	(if (zerop test-result) t nil)
 	)
       nil
       )
