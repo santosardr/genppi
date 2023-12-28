@@ -377,21 +377,24 @@
 (defun similar-test( seqA seqB &optional aadifflimit checkpointminlimit )
   (declare (type cons seqA))
   (declare (type cons seqB))
-					;  (print (length (cadr seqA)))
-					;  (print (length (cadr seqB)))
-					;  (print (append (cadr seqA) (cadr seqB)))
   (if (and (> (length (cadr seqA)) 0) (> (length (cadr seqB)) 0))
-      (let ((test-result 0) (datamatrixAB nil) (seqAsf) (seqBsf) )
+      (let ((test-result nil) (datamatrixAB nil) (seqAsf) (seqBsf) (similar-size 0.90) )
 	(setf seqAsf (mapcar #'(lambda (x) (float x 0.0s0)) (cadr seqA))
 	      seqBsf (mapcar #'(lambda (x) (float x 0.0s0)) (cadr seqB))
-	      datamatrixAB (make-array (list 1 (* 2 (length seqAsf) ))
-				       :element-type 'single-float
-				       :initial-contents (list (append seqAsf seqBsf)))
-	      test-result (CL-RANDOM-FOREST::predict-forest *forest* datamatrixAB 0))
-	(if (zerop test-result) t nil)
-	)
-      nil
+	      seqAsize (reduce #'+ (subseq seqAsf 0 19))
+	      seqBsize (reduce #'+ (subseq seqBsf 0 19)))
+	(if (and (>= seqAsize (* similar-size seqBsize)) (>= seqBsize (* similar-size seqAsize)))
+	    (progn 
+	    (setf datamatrixAB (make-array (list 1 (* 2 (length seqAsf) ))
+					   :element-type 'single-float
+					   :initial-contents (list (append seqAsf seqBsf)))
+		  test-result (CL-RANDOM-FOREST::predict-forest *forest* datamatrixAB 0))
+	    (if (zerop test-result) t nil)
+	    ))
+      test-result
       )
+    nil
+    )
   )
  ;-------------------------------------------------------------------------------
 
