@@ -1368,8 +1368,8 @@
  (setf *phylogenetic-profiles-ppi-by-score* (remove-duplicates *phylogenetic-profiles-ppi-by-score* :test #'= :key #'first))
 
  (dolist (p *phylogenetic-profiles-ppi*)
- (setf posicao-grupo (position-if #'(lambda (x) (= (ppi-struct-weight p) (first x))) *phylogenetic-profiles-ppi-by-score*))
- (push p (second (elt *phylogenetic-profiles-ppi-by-score* posicao-grupo)))
+   (setf posicao-grupo (position-if #'(lambda (x) (= (ppi-struct-weight p) (first x))) *phylogenetic-profiles-ppi-by-score*))
+   (if posicao-grupo (push p (second (elt *phylogenetic-profiles-ppi-by-score* posicao-grupo))) )
  );dolist
 
  (setf *phylogenetic-profiles-ppi* nil)
@@ -1402,14 +1402,14 @@
  do (progn
  (unless (> (comparar-perfis (first (elt grupos-identicos i)) (first (elt grupos-identicos j))) pptolerance)
  ;;Unless the difference between the profiles of a pair of groups is greater than the tolerated difference, make:
- ;;Adding to the gi group, the gj group, which is similar to the gi group.
- (push (elt grupos-identicos j) (second (elt grupos-similares i)))
- ;;Summing up the total amount of proteins between similar groups.
- (setf soma-grupos (+ soma-grupos (third (elt grupos-identicos j))))
+   ;;Adding to the gi group, the gj group, which is similar to the gi group.
+   (if i (push (elt grupos-identicos j) (second (elt grupos-similares i))))
+   ;;Summing up the total amount of proteins between similar groups.
+   (if j (setf soma-grupos (+ soma-grupos (third (elt grupos-identicos j)))))
  );unlles
  );progn-do
  );loop-dotimes
- (setf (elt grupos-similares i) (nconc (elt grupos-similares i) (list soma-grupos)))
+ (if i (setf (elt grupos-similares i) (nconc (elt grupos-similares i) (list soma-grupos))))
  (setf soma-grupos 0)
  );dotimes
 
@@ -1435,8 +1435,8 @@
  (setf *phylogenetic-profiles-ppi-by-score* (remove-duplicates *phylogenetic-profiles-ppi-by-score* :test #'= :key #'first))
 
  (dolist (p *phylogenetic-profiles-ppi*)
- (setf posicao-grupo (position-if #'(lambda (x) (= (ppi-struct-weight p) (first x))) *phylogenetic-profiles-ppi-by-score*))
- (push p (second (elt *phylogenetic-profiles-ppi-by-score* posicao-grupo)))
+   (setf posicao-grupo (position-if #'(lambda (x) (= (ppi-struct-weight p) (first x))) *phylogenetic-profiles-ppi-by-score*))
+   (if posicao-grupo (push p (second (elt *phylogenetic-profiles-ppi-by-score* posicao-grupo))))
  );dolist
 
  (setf *phylogenetic-profiles-ppi* nil)
