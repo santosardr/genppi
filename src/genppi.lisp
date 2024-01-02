@@ -385,13 +385,12 @@
 	      seqBsize (reduce #'+ (subseq seqBsf 0 19))
 	      aadifflimit nil checkpointminlimit nil)
 	(if (and (>= seqAsize (* similar-size seqBsize)) (>= seqBsize (* similar-size seqAsize)))
-	    (progn 
 	    (setf datamatrixAB (make-array (list 1 (* 2 (length seqAsf) ))
 					   :element-type 'single-float
 					   :initial-contents (list (append seqAsf seqBsf)))
-		  test-result (CL-RANDOM-FOREST::predict-forest *forest* datamatrixAB 0))
-	    (if (zerop test-result) t nil)
-	    ))
+		  test-result (CL-RANDOM-FOREST::predict-forest *forest* datamatrixAB 0)
+		  test-result (if (= test-result 0) t nil))
+	    )
       test-result
       )
     nil
