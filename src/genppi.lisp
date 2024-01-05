@@ -378,7 +378,7 @@
   (declare (type cons seqA))
   (declare (type cons seqB))
   (if (and (> (length (cadr seqA)) 0) (> (length (cadr seqB)) 0))
-      (let ((test-result nil) (datamatrixAB nil) (seqAsf) (seqBsf) (seqAsize) (seqBsize) (similar-size 0.97) )
+      (let ((test-result nil) (datamatrixAB nil) (seqAsf) (seqBsf) (seqAsize) (seqBsize) (similar-size 0.99) )
 	(setf seqAsf (mapcar #'(lambda (x) (float x 0.0s0)) (cadr seqA))
 	      seqBsf (mapcar #'(lambda (x) (float x 0.0s0)) (cadr seqB))
 	      seqAsize (reduce #'+ (subseq seqAsf 0 19))
@@ -910,6 +910,68 @@
  ) ) )
  ppi) )
 
+(defun replace-item (target item replacements)
+  (let ((pos (position item target)))
+    (when pos
+      (setq target (append (subseq target 0 pos)
+                           replacements
+                           (subseq target (1+ pos)))))))
+(defun substitute-node (target number node)
+  (let ( (header) (replacements) )
+    (if (and target node (> number 0))
+	(if (< number (length target))
+	    (progn
+	      (setf header (first (nth number target)))
+	      (loop for subnode in node do
+		    (setf replacements (append replacements (list (list header subnode (length subnode))))))
+	      (replace-item target (nth number target)  replacements)
+	      )))
+    ))
+
+(defun shuffle-list (target)
+  (let ((copy (copy-list target)))
+    (loop for i downfrom (length copy) to 2 do
+          (rotatef (nth (random i) copy)
+                   (nth (1- i) copy)))
+    copy))
+
+(defun split-list (protein-list dividend redundants)
+  (let* ( (protein-list-shuffled (shuffle-list protein-list)) 
+         (n (length protein-list-shuffled) ) 
+          (sublist-size) (sublists) (pivotal-sublist) (non-pivotal-sublists) )
+    (if (and (< dividend n) (< redundants n))
+  	(progn
+	  (setf 
+           sublist-size (round (/ n dividend))
+           sublists (loop for i from 0 below n by sublist-size
+                          collect (subseq protein-list-shuffled i (min (+ i sublist-size) n)))
+           dividend (length sublists)
+	   )
+	  ;; Add redundants random elements from the non-pivotal sublists to the pivotal sublist
+	  (loop for pivotal-index from 0 to (- dividend 1) do
+		(setf pivotal-sublist (nth pivotal-index sublists)
+                      non-pivotal-sublists (remove pivotal-sublist sublists :test #'equal))
+		(dotimes ( _ redundants)
+		  ;; Check if there are any elements left to take from non-pivotal sublists
+		  (when (some #'identity non-pivotal-sublists)
+		    (let* ((source-sublist-index (random (length non-pivotal-sublists)))
+			   (source-sublist (nth source-sublist-index non-pivotal-sublists))
+			   (element-index) (element))
+                      ;; Proceed only if the source sublist is not empty
+                      (when source-sublist
+			(setf element-index (random (length source-sublist))
+                              element (nth element-index source-sublist))
+			;; Ensure the element is not already in the pivotal sublist
+			(unless (member element pivotal-sublist)
+			  (push element pivotal-sublist)
+			  ;; Remove the element from the source sublist
+			  (setf (nth source-sublist-index non-pivotal-sublists)
+				(remove element source-sublist :test #'equal)))))))
+		;; Update the pivotal sublist
+		(setf (nth pivotal-index sublists) pivotal-sublist))
+          ))
+    sublists))
+
 (declaim (ftype (function (single-float fixnum) ) phylogenetic-profiles-complete))
 (defun phylogenetic-profiles-complete (percentage-pp pptolerance)
  (defparameter *agrupamento-por-perfis-filos-identicos* (make-hash-table :test #'equalp)
@@ -964,7 +1026,7 @@
  ;;Concatenating to a group g, the size of group g.
  (setf g (nconc g (list (length (second g)))))
  )
-
+ 
  (unless (= (length grupos-identicos) 0)
  (cond
  ;;If the user only wants identical profiles
@@ -972,8 +1034,19 @@
  (progn
 
  ;;Ordering groups by size, from smallest to largest.
- (setf grupos-identicos (sort grupos-identicos #'< :key #'third))
+   (setf grupos-identicos (sort grupos-identicos #'< :key #'third))
 
+ ;;splitting large grupos-identicos into smaller groups with redundant elements
+   (loop for grupo from 0 to (length grupos-identicos) do
+	 (setf howmany (third (nth grupo grupos-identicos)))
+       (if (> howmany 100)
+	   (setf grupos-identicos  (SUBSTITUTE-NODE
+				    grupos-identicos
+				    grupo
+				    (split-list (second (nth grupo grupos-identicos))
+						(round (* howmany 0.950))
+						(round (* howmany 0.750)))))
+	   ))
  ;;Stored the groups in a hash table that will be used to make reports.
  (setf (gethash k *agrupamento-por-perfis-filos-identicos*) grupos-identicos)
 
