@@ -1045,7 +1045,7 @@
 				    grupo
 				    (split-list (second (nth grupo grupos-identicos))
 						(round (* howmany 0.950))
-						(round (* howmany 0.750)))))
+						(round (* howmany 0.500)))))
 	   ))
  ;;Stored the groups in a hash table that will be used to make reports.
  (setf (gethash k *agrupamento-por-perfis-filos-identicos*) grupos-identicos)
