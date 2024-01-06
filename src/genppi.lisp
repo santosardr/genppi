@@ -910,6 +910,13 @@
  ) ) )
  ppi) )
 
+(defun calculate-redundancy (x)
+  (cond
+    ((< x 500) 0.5)
+    ((> x 2000) 0.05)
+    (t (let ((ratio (/ (- x 500) 1500.0)))
+         (+ (* ratio (- 0.05 0.5)) 0.5)))))
+
 (defun replace-item (target item replacements)
   (let ((pos (position item target)))
     (when pos
@@ -1045,7 +1052,7 @@
 				    grupo
 				    (split-list (second (nth grupo grupos-identicos))
 						(round (* howmany 0.950))
-						(round (* howmany 0.500)))))
+						(round (* howmany (calculate-redundancy howmany))))))
 	   ))
  ;;Stored the groups in a hash table that will be used to make reports.
  (setf (gethash k *agrupamento-por-perfis-filos-identicos*) grupos-identicos)
