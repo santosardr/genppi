@@ -360,15 +360,8 @@
  (let ((checkpoint 0))
 
  (loop
- for nA in (cadr seqA)
- for nB in (cadr seqB)
-
- ;;When the difference of histogram between nA(amino n of seqA) and nB(amino n of seqB)
- ;;is <= to the difference limit tolerated and defined as functionparameter (aadifflimit),
- ;;means that the two proteins are similar.
- ;;increments the checkpoint, which counts the amount of amino acidsthat are in.
- ;;of the tolerated difference. Finally, in if,checks whether the amount of amino acids
- ;;considered similar, is >= to checkpointminlimit (amount of amino acidsconsidered in the analysis).
+ for nA in seqA
+ for nB in seqB
  do (when (<= (abs (- nA nB)) aadifflimit ) (incf checkpoint) ));loop
  (if (>= checkpoint checkpointminlimit) t nil)
  );let
@@ -382,15 +375,17 @@
 	(setf seqAsf (mapcar #'(lambda (x) (float x 0.0s0)) (cadr seqA))
 	      seqBsf (mapcar #'(lambda (x) (float x 0.0s0)) (cadr seqB))
 	      seqAsize (reduce #'+ (subseq seqAsf 0 19))
-	      seqBsize (reduce #'+ (subseq seqBsf 0 19))
-	      aadifflimit nil checkpointminlimit nil)
+	      seqBsize (reduce #'+ (subseq seqBsf 0 19)))
 	(if (and (>= seqAsize (* similar-size seqBsize)) (>= seqBsize (* similar-size seqAsize)))
-	    (setf datamatrixAB (make-array (list 1 (* 2 (length seqAsf) ))
-					   :element-type 'single-float
-					   :initial-contents (list (append seqAsf seqBsf)))
-		  test-result (CL-RANDOM-FOREST::predict-forest *forest* datamatrixAB 0)
-		  test-result (if (= test-result 0) t nil))
-	    )
+	    (if (not (similar-test-ori seqAsf seqBsf aadifflimit checkpointminlimit))
+		(setf datamatrixAB (make-array (list 1 (* 2 (length seqAsf) ))
+					       :element-type 'single-float
+					       :initial-contents (list (append seqAsf seqBsf)))
+		      test-result (CL-RANDOM-FOREST::predict-forest *forest* datamatrixAB 0)
+		      test-result (if (= test-result 0) t nil))
+	      (setf test-result t)
+	      )
+	  )
       test-result
       )
     nil
