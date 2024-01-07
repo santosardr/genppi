@@ -995,6 +995,23 @@
 		    )))))
   grupos-identicos
   )
+(defun deduplicate-ppi-list (ppi-list)
+  (let ((seen (make-hash-table :test #'equalp))
+        (unique-ppi '()))
+    (dolist (ppi ppi-list)
+      (let ((genea (ppi-struct-genea ppi))
+            (geneb (ppi-struct-geneb ppi)))
+        (unless (gethash (list genea geneb) seen)
+          (push ppi unique-ppi)
+          (setf (gethash (list genea geneb) seen) t))))
+    (nreverse unique-ppi)))
+
+(defun deduplicate-ppi-hash-table (ppi-hash-table)
+  (maphash (lambda (key ppi-list)
+             (setf (gethash key ppi-hash-table)
+                   (deduplicate-ppi-list ppi-list)))
+           ppi-hash-table)
+  ppi-hash-table)
 
 (declaim (ftype (function (single-float fixnum) ) phylogenetic-profiles-complete))
 (defun phylogenetic-profiles-complete (percentage-pp pptolerance)
@@ -1139,13 +1156,14 @@
 
  ;;If any ppi has been predicted, the identifier from ppi to true is changed.
  (if (> (length ppi) 0)
- (setf *ppi-identified-pp* t)
- )
-
- ;;Configuring the ppi of the k genome in the hash table of ppi.
+     (progn
+       (setf ppi (deduplicate-ppi-list ppi)
+	     *ppi-identified-pp* t)
+       ))
+  ;;Configuring the ppi of the k genome in the hash table of ppi.
  (setf (gethash k ppi-hash-table) ppi)
  ;(setf (gethash k *agrupamento-por-perfis-filos-identicos*) ppi)
-
+ 
  ;;Reconfiguring the variables.
  (setf grupos-identicos nil)
  (setf grupos-similares nil)
@@ -1362,10 +1380,11 @@
  );unless
 
  ;;If any ppi has been predicted, the identifier from ppi to true is changed.
- (if (> (length ppi) 0)
- (setf *ppi-identified-pp* t)
- )
-
+(if (> (length ppi) 0)
+     (progn
+       (setf ppi (deduplicate-ppi-list ppi)
+             *ppi-identified-pp* t)
+       ))
  ;; Configuring the ppi of the k genome in the ppi hash table.
  (setf (gethash k ppi-hash-table) ppi)
 
@@ -1549,9 +1568,10 @@
 
  ;;If any ppi has been predicted, the identifier from ppi to true is changed.
  (if (> (length *phylogenetic-profiles-ppi*) 0)
- (setf *ppi-identified-pp* t)
- )
-
+     (progn
+       (setf *phylogenetic-profiles-ppi* (deduplicate-ppi-list *phylogenetic-profiles-ppi*)
+             *ppi-identified-pp* t)
+       ))
  ;;Configuring the ppi of the k genome in the hash table of ppi.
  (setf (gethash k ppi-hash-table) *phylogenetic-profiles-ppi*)
  ;(setf (gethash k *agrupamento-por-perfis-filos-identicos*) *phylogenetic-profiles-ppi*)
@@ -1712,10 +1732,11 @@
  );unless
 
  ;;If any PPI has beenpredicted, the PPI identifier is changed to true.
- (if (> (length ppi) 0)
- (setf *ppi-identified-pp* t)
- )
-
+(if (> (length ppi) 0)
+     (progn
+       (setf ppi (deduplicate-ppi-list ppi)
+             *ppi-identified-pp* t)
+       ))
  ;;Configuring the ppi of the k genome in the hash table of ppi.
  (setf (gethash k ppi-hash-table) ppi)
 
@@ -1809,10 +1830,11 @@
  );unless
 
  ;;If any PPI has beenpredicted, the PPI identifier is changed to true.
- (if (> (length ppi) 0)
- (setf *ppi-identified-pp* t)
- )
-
+(if (> (length ppi) 0)
+     (progn
+       (setf ppi (deduplicate-ppi-list ppi)
+             *ppi-identified-pp* t)
+       ))
  ;;Configuring the ppi of the k genome in the hash table of ppi.
  (setf (gethash k ppi-hash-table) ppi)
  ;(setf (gethash k *agrupamento-por-perfis-filos-identicos*) ppi)
@@ -1981,10 +2003,11 @@
  );unless
 
  ;;If any PPI has beenpredicted, the PPI identifier is changed to true.
- (if (> (length ppi) 0)
- (setf *ppi-identified-pp* t)
- )
-
+(if (> (length ppi) 0)
+     (progn
+       (setf ppi (deduplicate-ppi-list ppi)
+             *ppi-identified-pp* t)
+       ))
  ;;Configuring the ppi of the k genome in the hash table of ppi.
  (setf (gethash k ppi-hash-table) ppi)
  ;(setf (gethash k *agrupamento-por-perfis-filos-identicos*) ppi)
@@ -3194,11 +3217,13 @@
  );unless
  );dolist
  ;;recording ppi by phylogenetic profile in the ppi hash table -phylogenetic-profiles.
+ (if (> (length lista-ppi-pp) 0)
+     (progn
+       (setf lista-ppi-pp (deduplicate-ppi-list lista-ppi-pp)
+             *ppi-identified-pp* t)
+       ))
  (setf (gethash g ppi-phylogenetic-profiles) lista-ppi-pp)
  ;;If any ppi has been predicted, the identifier from ppi to true is changed.
- (if (> (length lista-ppi-pp) 0)
- (setf *ppi-identified-pp* t)
- )
  (setf lista-ppi-pp nil)
  );unlles
  );progn
