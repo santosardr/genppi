@@ -1450,8 +1450,8 @@
  (dolist (p perfis)
  (setf posicao-grupo (position-if #'(lambda (x) (eql nil (set-exclusive-or (second p) (first x) :test #'string=))) grupos-identicos))
  (if (eql posicao-grupo nil)
- (progn (push (list (second p) (list (list (first p) (third p)))) grupos-identicos)
- (progn (push (list (first p) (third p)) (second (elt grupos-identicos posicao-grupo)))
+ (progn (push (list (second p) (list (list (first p) (third p)))) grupos-identicos) #|(format t "entrou 1~%")|#)
+ (progn (push (list (first p) (third p)) (second (elt grupos-identicos posicao-grupo))) #|(format t "entrou 2~%")|#)
  );if
  );dolist
 ;End of Grouping
