@@ -2,7 +2,6 @@
 (unless (find-package :features) (require :features))
 (unless (find-package :cl-random-forest) (ql:quickload :cl-random-forest))
 (unless (find-package :cl-store) (ql:quickload :cl-store ))
-
 (defun get-number-of-processors ()
  (or
  #+darwin
@@ -17,16 +16,13 @@
  (if num-processors
  (parse-integer num-processors)))
  4))
-
 (defun workers() (get-number-of-processors))
-
 (declaim (optimize (speed 3) (debug 0) (safety 0) (space 0)))
-;;;;Implementation of Genppi software for ppis prediction
-;;;;Master's Project in Computer Science - UFU.
-;;;;Student: William Ferreira dos Ajos
-;;;;----------------------------------------------------------------------------
-
-;;Global variables used in functions
+;Implementation of Genppi software for ppis prediction
+;Master's Project in Computer Science - UFU.
+;Student: William Ferreira dos Ajos
+;----------------------------------------------------------------------------
+;Global variables used in functions
 (defparameter *genomas* (make-hash-table :test #'equalp)
  "Tabela hash para armazenar os genomas de uma análise")
 (defparameter *pan-genoma* (make-hash-table :test #'equalp)
@@ -63,50 +59,44 @@
  constatado ppi por fusão gênica conservada ou não")
 (defparameter *forest* nil
  "Variável global para armazenar o árvore de random forest treinanda")
-
 (defstruct ppi-struct (genea "" :type string) (geneb "" :type string ) (weight 0.0 :type short-float ) (position 0 :type integer))
-;;------------------------------------------------------------------------------
-
-;;Read file and put it in a list. In this case, a list with sub-lists,
-;;where, each sub-list,will contain two elements, the name of the protein
-;;and its amino acid sequence respectively.
- ;(read-fasta "/home/william/PPIs-Predictor/histograma/sequences.fasta")
+;------------------------------------------------------------------------------
+;Read file and put it in a list. In this case, a list with sub-lists,
+;where, each sub-list,will contain two elements, the name of the protein
+;and its amino acid sequence respectively.
+;(read-fasta "/home/william/PPIs-Predictor/histograma/sequences.fasta")
 (declaim (ftype (function ( pathname ) ) read-fasta))
 (defun read-fasta (filename)
- ;; Read file. If the same does not exist, returns nil.
+;Read file. If the same does not exist, returns nil.
  (let ((in (open filename :if-does-not-exist nil))
  (fastalist nil)
  (fastaname nil)
  (proteins nil)
  (nonaalist (list '+ '- '* '\. '\# '\ ))
  );let init block
- (when in;;When in is not nil, thatis, when the file was read correctly.
- ;Loops
- ;This loop reads the first line of the file (headerof the first protein), and assigns to the variable fastaname.
+ (when in;When in is not nil, thatis, when the file was read correctly.
+;Loops
+;This loop reads the first line of the file (headerof the first protein), and assigns to the variable fastaname.
  (loop for line = (read-line in nil) until (not (zerop (length line)))
  finally (setq fastaname line)
  );loop to skip blank lines
- ;(return)
- ;This when only runs when the read file is a fasta, that is, it has '> at the beginning.
- (when (char= (elt fastaname 0) #\>) ;checks the fasta format.
+;(return)
+;This when only runs when the read file is a fasta, that is, it has '> at the beginning.
+ (when (char= (elt fastaname 0) #\>);checks the fasta format.
  (loop for line = (read-line in nil)
  while line do
  (when (> (length line) 0);when there is content in the read line.
- (if (char= (elt line 0) #\>);;if found new protein header.
+ (if (char= (elt line 0) #\>);if found new protein header.
  (progn
- ;Loop to remove characters that are not amino acids (header name).
+;Loop to remove characters that are not amino acids (header name).
  (dolist (nonaa nonaalist fastalist)
  (setq fastalist (delete nonaa fastalist))
  );dolist
-
- ;;Assigns the variable proteins, a list of proteins, where each protein is a list of two elements,
- ;;the header name of the protein and its amino acid sequence.
+;Assigns the variable proteins, a list of proteins, where each protein is a list of two elements,
+;the header name of the protein and its amino acid sequence.
  (setq proteins (append proteins (list (list (subseq fastaname 1) fastalist))))
-
  (setq fastaname line fastalist nil)
-
- );;progn. Here ends the actions for a new protein header found.
-
+ );progn. Here ends the actions for a new protein header found.
  (setq fastalist (append fastalist
  (loop for aa across line collect (intern (string-upcase (string aa)))
  );Loop
@@ -115,30 +105,25 @@
  );if found new header
  );when there is content
  );loop to read a sequence
-
- (when fastalist;;when fastalist is not nil
- ;loop to remove non-amino acid characters (header name)
+ (when fastalist;when fastalist is not nil
+;loop to remove non-amino acid characters (header name)
  (dolist (nonaa nonaalist fastalist)
  (setq fastalist (delete nonaa fastalist))
  );dolist
-
- ;;Assigns the variable proteins,a list ofproteins, where each protein is a list of two elements,
- ;;the header name of the protein and its amino acid sequence.
+;Assigns the variable proteins,a list ofproteins, where each protein is a list of two elements,
+;the header name of the protein and its amino acid sequence.
  (setq proteins (append proteins (list (list (subseq fastaname 1) fastalist))))
-
  );when fastalist
  );when fasta format
  (close in)
  );when in
- proteins ;;returns a list of lists, where each element of the root list, is another list
- ;;containing the name and amino acid sequence of the protein.
+ proteins;returns a list of lists, where each element of the root list, is another list
+;containing the name and amino acid sequence of the protein.
  );let
  )
- ;-------------------------------------------------------------------------------
-
-;;function that generates the histogram of proteins,i.e. the frequency distribution
-;;in which each amino acid appears in proteins.
-
+;-------------------------------------------------------------------------------
+;function that generates the histogram of proteins,i.e. the frequency distribution
+;in which each amino acid appears in proteins.
 (declaim (ftype (function ( pathname ) ) histo-fasta))
 (defun histo-fasta( filename )
  (let ((multifastalist (read-fasta filename ))
@@ -146,29 +131,28 @@
  (histolist nil)
  (fastaname)
  (histogram nil))
- ;This dolist scans the file protein list read by the read-fasta function.
+;This dolist scans the file protein list read by the read-fasta function.
  (dolist (fastalist multifastalist histogram)
- ;;the setq below assigns the variable fastaname,the header name of protein n.
+;the setq below assigns the variable fastaname,the header name of protein n.
  (setq fastaname (concatenate 'string (string (gensym))"."(car fastalist))
  histolist nil
  );setq
- ;;This dolist scans the list of amino acidss definided in aatargets, and counts the amount oftimes
- ;;that each amino acid contained in aatargets, appears in protein n.
+;This dolist scans the list of amino acidss definided in aatargets, and counts the amount oftimes
+;that each amino acid contained in aatargets, appears in protein n.
  (dolist (aa aatargets histolist)
  (setq histolist (append histolist (list (count aa (cadr fastalist)))))
- );inner do ;cadr pega o segundo elemento da lista, neste caso,
- ;;amino acid sequence of protein n.
-
- ;;Here, with func append,the blending of the analyzed proteins is being made,
- ;;by creating a single list with sub-lists,whereeach sub-list is a representation
- ;;of the protein histogram, containing the name of the protein and the frequency of times each amino acid
- ;;analyzed appears in it.
+ );inner do;cadr pega o segundo elemento da lista, neste caso,
+;amino acid sequence of protein n.
+;Here, with func append,the blending of the analyzed proteins is being made,
+;by creating a single list with sub-lists,whereeach sub-list is a representation
+;of the protein histogram, containing the name of the protein and the frequency of times each amino acid
+;analyzed appears in it.
  (setq histogram (append histogram (list (list fastaname histolist))))
  );outer do
- histogram; retorna o histograma das proteinas.
+ histogram;retorna o histograma das proteinas.
  );let
  )
- ;histo-fasta subtitute
+;histo-fasta subtitute
 (defun propensity-data()
  (list (list "BASIC" "ACID" "POLAR" "NONPOLAR" "MASS" "MASSMR" "PARJ860101" "JOND750101" "EISD840101" "JURD980101")
  (list
@@ -182,7 +166,6 @@
  (list 0.87 0.85 0.09 0.66 1.52 0.0 0.67 0.1 0.87 3.15 2.17 1.64 1.67 2.87 2.77 0.07 0.07 3.77 2.67 1.87)
  (list 0.25 -1.76 -0.64 -0.72 0.04 -0.69 -0.62 0.16 -0.4 0.73 0.53 -1.1 0.26 0.61 -0.07 -0.26 -0.18 0.37 0.02 0.54)
  (list 1.1 -5.1 -3.5 -3.6 2.5 -3.68 -3.2 -0.64 -3.2 4.5 3.8 -4.11 1.9 2.8 -1.9 -0.5 -0.7 -0.46 -1.3 4.2)) ))
-
 (declaim (ftype (function ( pathname ) ) features-fasta))
 (defun features-fasta ( fastafile )
  (if fastafile
@@ -204,7 +187,7 @@
  (number_list)
  (proplabels)
  (props)
- ); let pars
+ );let pars
  (if (not (probe-file fastafile))
  (progn
  (format t "~%~a~%" "ERROR: Amino acid fasta file is missing")
@@ -222,19 +205,18 @@
  multifasta-size (length multifasta)
  histogram_vector (make-array (list (+ multifasta-size 1) (+ (length alphabet) 1) ) :initial-element nil)
  );setf
- ;replicates the proplabels for the begin, middle and end of each protein sequence
+;replicates the proplabels for the begin, middle and end of each protein sequence
  (loop for fasta in multifasta do
  (setf sequence (cadr fasta)
  sequence-name (car fasta)
  listof-sequence-names (append listof-sequence-names (list sequence-name))
  sequence-histogram (features:dohistogram sequence histoalphabet)
  );setf
- ;Start sequence processing
+;Start sequence processing
  (loop for pos from 0 to (- (length histoalphabet) 1) do
  (setf (aref histogram_vector (+ sequence-number 1) (+ pos 1)) (nth pos sequence-histogram))
  );loop
- 
- ;after the histogram calculation we start to compute the physicochemicals properties
+;after the histogram calculation we start to compute the physicochemicals properties
  (setf pos (length histoalphabet))
  (loop for physico in physicochemicals do
  (setf (aref histogram_vector (+ sequence-number 1) (+ pos 1))
@@ -243,7 +225,7 @@
  ))
  (incf pos)
  )
- ;Computing the number of aminoacids at the region known to host the signal peptide
+;Computing the number of aminoacids at the region known to host the signal peptide
  (setf sequence-histogram (features:dohistogramini sequence histoalphabet))
  (loop for physico in physicochemicals do
  (setf (aref histogram_vector (+ sequence-number 1) (+ pos 1))
@@ -252,7 +234,7 @@
  ))
  (incf pos)
  )
- ;Computing the number of aminoacids at the end of the protein
+;Computing the number of aminoacids at the end of the protein
  (setf sequence-histogram (features:dohistogramend sequence histoalphabet))
  (loop for physico in physicochemicals do
  (setf (aref histogram_vector (+ sequence-number 1) (+ pos 1))
@@ -261,8 +243,7 @@
  ))
  (incf pos)
  )
- 
- ;Computing the number of aminoacids at the middle
+;Computing the number of aminoacids at the middle
  (setf sequence-histogram (features:dohistogrammid sequence histoalphabet))
  (loop for physico in physicochemicals do
  (setf (aref histogram_vector (+ sequence-number 1) (+ pos 1))
@@ -271,26 +252,23 @@
  ))
  (incf pos)
  )
- 
  (incf sequence-number)
  );loop for multifasta
- 
- ;final pretty print
- ;write the name of the features in the first line of the histogram
- ;In the first line, the first column of features:histogram must be an empty string.
- ;Starting the names from the second column or x=1
+;final pretty print
+;write the name of the features in the first line of the histogram
+;In the first line, the first column of features:histogram must be an empty string.
+;Starting the names from the second column or x=1
  (setf (aref histogram_vector 0 0 ) "");empty string
- ;Inserting the attribute names in first line
+;Inserting the attribute names in first line
  (loop for y from 1 to (length histoalphabet) do
  (setf (aref histogram_vector 0 y )
  (symbol-name (nth (- y 1) histoalphabet))))
  (loop for y from (length histoalphabet) to (length alphabet) do
  (setf (aref histogram_vector 0 y )
  (nth (- y 1) alphabet)))
- 
- ;Inserting the name of the sequences in the first column of all lines
+;Inserting the name of the sequences in the first column of all lines
  (loop for y from 1 to multifasta-size do (setf (aref histogram_vector y 0 ) (nth (- y 1) listof-sequence-names)))
- ;Once we wrote the first row, now we need to write the data concerning each sequence name
+;Once we wrote the first row, now we need to write the data concerning each sequence name
  (setf histogram_list nil)
  (loop for x from 1 to multifasta-size do
  (setf protein (list (aref histogram_vector x 0)))
@@ -304,61 +282,46 @@
  );let
  );if
  );defun
- ;-------------------------------------------------------------------------------
-
-
-;; Deserialize the `forest` object
+;-------------------------------------------------------------------------------
+;Deserialize the `forest` object
 (defun deserialize-forest (filename)
-  (with-open-file (stream filename :direction :input 
-  :element-type '(unsigned-byte 8))
-  (cl-store:restore stream)))
-
-;;Functions to break a list in a given
+ (with-open-file (stream filename :direction :input
+ :element-type '(unsigned-byte 8))
+ (cl-store:restore stream)))
+;Functions to break a list in a given
 (declaim (ftype (function ( cons fixnum ) ) split-up-to))
 (defun split-up-to (lista pos)
-
  (declare (type cons lista))
  (declare (type fixnum pos))
-
  (cond
  ((<= pos 0) ())
  ((null lista) lista)
  (t (cons (car lista) (split-up-to (cdr lista) (1- pos))))
  ))
-
 (declaim (ftype (function ( cons fixnum ) ) split-after))
 (defun split-after (lista pos)
-
  (declare (type cons lista))
  (declare (type fixnum pos))
-
  (cond
  ((<= pos 0) lista)
  ((null lista) ())
  (t (split-after (cdr lista) (1- pos)))
  ))
-
 (declaim (ftype (function ( cons fixnum ) ) split))
 (defun split (lista pos)
-
  (declare (type cons lista))
  (declare (type fixnum pos))
-
  (list (split-up-to lista pos) (split-after lista pos))
  )
- ;-------------------------------------------------------------------------------
-
-;;Function to test whether two proteins are similar via histogram
+;-------------------------------------------------------------------------------
+;Function to test whether two proteins are similar via histogram
 (declaim (ftype (function ( cons cons fixnum fixnum ) ) similar-test-ori))
 (defun similar-test-ori( seqA seqB aadifflimit checkpointminlimit )
-
  (declare (type cons seqA))
  (declare (type cons seqB))
  (declare (type fixnum aadifflimit))
  (declare (type fixnum checkpointminlimit))
-
  (let ((checkpoint 0))
-
  (loop
  for nA in seqA
  for nB in seqB
@@ -366,46 +329,42 @@
  (if (>= checkpoint checkpointminlimit) t nil)
  );let
  )
-
 (defun similar-test( seqA seqB &optional aadifflimit checkpointminlimit )
-  (declare (type cons seqA))
-  (declare (type cons seqB))
-  (if (and (> (length (cadr seqA)) 0) (> (length (cadr seqB)) 0))
-      (let ((test-result nil) (datamatrixAB nil) (seqAsf) (seqBsf) (seqAsize) (seqBsize) (similar-size 0.99) )
-	(setf seqAsf (mapcar #'(lambda (x) (float x 0.0s0)) (cadr seqA))
-	      seqBsf (mapcar #'(lambda (x) (float x 0.0s0)) (cadr seqB))
-	      seqAsize (reduce #'+ (subseq seqAsf 0 19))
-	      seqBsize (reduce #'+ (subseq seqBsf 0 19))
-	      test-result (similar-test-ori seqAsf seqBsf aadifflimit checkpointminlimit)
-	      )
-	(if (not test-result)
-	    (if (and (>= seqAsize (* similar-size seqBsize)) (>= seqBsize (* similar-size seqAsize)))
-		(if *forest*
-		    (setf datamatrixAB (make-array (list 1 (* 2 (length seqAsf) ))
-						   :element-type 'single-float
-						   :initial-contents (list (append seqAsf seqBsf)))
-			  test-result (CL-RANDOM-FOREST::predict-forest *forest* datamatrixAB 0)
-			  test-result (if (= test-result 0) t nil))
-		  )
-	      )
-	  )
-	test-result
-	)
-    nil
-    )
-  )
- ;-------------------------------------------------------------------------------
-
-;;Block of functions to read files from a directory
+ (declare (type cons seqA))
+ (declare (type cons seqB))
+ (if (and (> (length (cadr seqA)) 0) (> (length (cadr seqB)) 0))
+ (let ((test-result nil) (datamatrixAB nil) (seqAsf) (seqBsf) (seqAsize) (seqBsize) (similar-size 0.99) )
+ (setf seqAsf (mapcar #'(lambda (x) (float x 0.0s0)) (cadr seqA))
+ seqBsf (mapcar #'(lambda (x) (float x 0.0s0)) (cadr seqB))
+ seqAsize (reduce #'+ (subseq seqAsf 0 19))
+ seqBsize (reduce #'+ (subseq seqBsf 0 19))
+ test-result (similar-test-ori seqAsf seqBsf aadifflimit checkpointminlimit)
+ )
+ (if (not test-result)
+ (if (and (>= seqAsize (* similar-size seqBsize)) (>= seqBsize (* similar-size seqAsize)))
+ (if *forest*
+ (setf datamatrixAB (make-array (list 1 (* 2 (length seqAsf) ))
+ :element-type 'single-float
+ :initial-contents (list (append seqAsf seqBsf)))
+ test-result (CL-RANDOM-FOREST::predict-forest *forest* datamatrixAB 0)
+ test-result (if (= test-result 0) t nil))
+ )
+ )
+ )
+ test-result
+ )
+ nil
+ )
+ )
+;-------------------------------------------------------------------------------
+;Block of functions to read files from a directory
 (defun component-present-p (value)
  (and value (not (eql value :unspecific))))
-
 (defun directory-pathname-p (p)
  (and
  (not (component-present-p (pathname-name p)))
  (not (component-present-p (pathname-type p)))
  p))
-
 (defun pathname-as-directory (name)
  (let ((pathname (pathname name)))
  (when (wild-pathname-p pathname)
@@ -420,13 +379,11 @@
  nil
  :defaults pathname)
  pathname)))
-
 (defun directory-wildcard (dirname)
  (make-pathname
  :name :wild
  :type #-clisp :wild #+clisp nil
  :defaults (pathname-as-directory dirname)))
-
 (defun list-directory (dirname)
  (when (wild-pathname-p dirname)
  (error "Can only list concrete directory names."))
@@ -441,9 +398,8 @@
  (nconc
  (directory wildcard)
  (directory (clisp-subdirectories-wildcard wildcard)))))
-;;------------------------------------------------------------------------------
-
-;;Function to load protein files and generate your histograms
+;------------------------------------------------------------------------------
+;Function to load protein files and generate your histograms
 (declaim (ftype (function (cons ) ) histo-genomas))
 (defun histo-genomas (files);files: Lista de arquivos de proteínas
  (defparameter *ppi-identified-cn* nil)
@@ -452,17 +408,14 @@
  (defparameter *genomas* (make-hash-table :test #'equalp))
  (defparameter *genomes-files* (list))
  (let ((laco 0)(genomenumber 0))
-
  (declare (type boolean *ppi-identified-cn*))
  (declare (type boolean *ppi-identified-pp*))
  (declare (type boolean *ppi-identified-gf*))
  (declare (type hash-table *genomas*))
-
  (format t "Generating amino acids histogram;~%")
  (format t "[05 10 15 20 25 30 35 40 45 50 55 60 65 70 75 80 85 90 95 100]%~%")
  (format *query-io* "[")
  (force-output *query-io*)
-
  (dotimes (i (length files))
  (unless (or (eql (pathname-type (pathname (elt files i))) nil)
  (not
@@ -472,12 +425,11 @@
  );or
  );not
  );or
- ;Unless the path i is a directory, or is not a fasta file, do:
+;Unless the path i is a directory, or is not a fasta file, do:
  (setf *genomes-files* (append *genomes-files* (list (pathname-name (pathname (elt files i))))))
- ;;Generates the histogram for each protein file i.
+;Generates the histogram for each protein file i.
  (setf (gethash (pathname-name (pathname (elt files i))) *genomas*) (features-fasta (elt files i)))
  );unless
-
  (dotimes (j (ceiling (- (* 60 (/ (/ (* (1+ genomenumber) 100) (length files)) 100)) laco)))
  (format *query-io* "=")
  (force-output *query-io*)
@@ -488,8 +440,7 @@
  (format t "]~%")
  );let
  );defun
-;;------------------------------------------------------------------------------
-
+;------------------------------------------------------------------------------
 (defun call-similar-test (j p proteins gp aadifflimit checkpointminlimit)
  (if (similar-test p (first gp) aadifflimit checkpointminlimit)
  (progn
@@ -499,15 +450,12 @@
  nil
  );if similar-test
  )
-
-;;Function block to generate pangenome
+;Function block to generate pangenome
 (declaim (ftype (function (fixnum fixnum ) ) pan-genoma-1))
 (defun pan-genoma-1 (aadifflimit checkpointminlimit)
-
  (defparameter *pan-genoma* (make-hash-table :test #'equalp))
  (defparameter *perfil-filogenetico* (make-hash-table :test #'equalp))
  (defstruct proteina localidade similares)
-
  (let ((pangenoma (list (list (list (string (gensym)) (list)))))
  (similares (list))
  (perfil-filo (list))
@@ -515,19 +463,16 @@
  (genomenumber 0)
  (howmanygenomes)
  )
-
  (declare (type hash-table *pan-genoma*))
  (declare (type hash-table *perfil-filogenetico*))
  (declare (type fixnum aadifflimit))
  (declare (type fixnum checkpointminlimit))
  (declare (type fixnum laco))
  (declare (type fixnum genomenumber))
-
  (format t "~%Generating pan-genome;~%")
  (format t "[05 10 15 20 25 30 35 40 45 50 55 60 65 70 75 80 85 90 95 100]%~%")
  (format *query-io* "[")
  (force-output *query-io*)
-
  (loop for j being the hash-keys in *genomas* using (hash-value proteins)
  do (progn
  (dolist (p proteins)
@@ -555,7 +500,6 @@
  (incf genomenumber)
  );progn
  );loop hash table *genomas*
-
  (setf pangenoma (rest pangenoma))
  (dolist (p pangenoma)
  (unless (eql (third p) nil)
@@ -570,22 +514,19 @@
  (append (gethash (first (second p)) *perfil-filogenetico*)
  (list (list (first (first p)) perfil-filo (second (second p))))
  );append
- );;setf phylogenetic profile
+ );setf phylogenetic profile
  );if remove-duplicates
  );unlles
  );dolist pangenome
  (format t "]~%")
  );let
  );defun
- ;-------------------------------------------------------------------------------
-
+;-------------------------------------------------------------------------------
 (declaim (ftype (function (fixnum fixnum fixnum fixnum) ) pan-genoma-2))
 (defun pan-genoma-2 (aadifflimit checkpointminlimit ppaadifflimit ppcheckpointminlimit)
-
  (defparameter *pan-genoma* (make-hash-table :test #'equalp))
  (defparameter *perfil-filogenetico* (make-hash-table :test #'equalp))
  (defstruct proteina localidade similares)
-
  (let ((pangenoma (list (list (list (string (gensym)) (list)))))
  (similares (list))
  (perfil-filo-p (list))
@@ -593,7 +534,6 @@
  (genomenumber 0)
  (howmanygenomes)
  )
-
  (declare (type hash-table *pan-genoma*))
  (declare (type hash-table *perfil-filogenetico*))
  (declare (type fixnum aadifflimit))
@@ -602,12 +542,10 @@
  (declare (type fixnum ppcheckpointminlimit))
  (declare (type fixnum laco))
  (declare (type fixnum genomenumber))
-
  (format t "~%Generating pan-genome;~%")
  (format t "[05 10 15 20 25 30 35 40 45 50 55 60 65 70 75 80 85 90 95 100]%~%")
  (format *query-io* "[")
  (force-output *query-io*)
-
  (loop for j being the hash-keys in *genomas* using (hash-value proteins)
  do (progn
  (dolist (p proteins)
@@ -635,18 +573,16 @@
  (incf genomenumber)
  );dolist proteins
  );loop hash table *genomeas*
-
  (setf pangenoma (rest pangenoma))
  (dolist (p pangenoma)
  (unless (eql (third p) nil)
- ;;inserting into the hash pangenome table.
+;inserting into the hash pangenome table.
  (setf (gethash (first (first p)) *pan-genoma*)
  (make-proteina :localidade (second p)
  :similares (third p)
  );make-protein
  );setf pangenome
-
- ;;Sweeping p-like genes to do new similarity test with p.
+;Sweeping p-like genes to do new similarity test with p.
  (dolist (similar (third p))
  (if (and similar (first similar) (second similar))
  (progn
@@ -659,32 +595,28 @@
  );progn
  );if
  );dolist similar
-
- ;;inserting in the profile-phylogenetic hash table
+;inserting in the profile-phylogenetic hash table
  (setf perfil-filo-p (remove-duplicates (append (list (first (second p))) perfil-filo-p) :test #'string=))
  (if (> (length perfil-filo-p) 1)
  (setf (gethash (first (second p)) *perfil-filogenetico*)
  (append (gethash (first (second p)) *perfil-filogenetico*)
  (list (list (first (first p)) perfil-filo-p (second (second p))))
  );append
- );;setf phylogenetic profile
+ );setf phylogenetic profile
  );if remove-duplicates
- ;;Resetting the profile-phylo-p variable
+;Resetting the profile-phylo-p variable
  (setf perfil-filo-p nil)
  );unlles
  );dolist pangenome
  (format t "]~%")
  );let
  );defun
- ;-------------------------------------------------------------------------------
-
-;;Function to predict ppi by gene fusion
+;-------------------------------------------------------------------------------
+;Function to predict ppi by gene fusion
 (declaim (ftype (function (fixnum fixnum single-float) ) rosetta-stone))
 (defun rosetta-stone(aadifflimit checkpointminlimit percentage-rs)
-
  (defparameter *fusoes* (make-hash-table :test #'equalp))
  (defstruct fusion ppi rosetta-stone)
-
  (let ((fusoes (list))
  (gene-a)
  (gene-b)
@@ -695,7 +627,6 @@
  (laco 0)
  (genomenumber 0)
  )
-
  (declare (type hash-table *fusoes*))
  (declare (type hash-table ppi-fusoes))
  (declare (type fixnum aadifflimit))
@@ -703,12 +634,10 @@
  (declare (type single-float percentage-rs))
  (declare (type fixnum laco))
  (declare (type fixnum genomenumber))
-
  (format t "~%Predicting ppi by gene-fusion;~%")
  (format t "[05 10 15 20 25 30 35 40 45 50 55 60 65 70 75 80 85 90 95 100]%~%")
  (format *query-io* "[")
  (force-output *query-io*)
-
  (loop for g being the hash-keys in *genomas* using (hash-value proteins)
  do (progn
  (setf qtd-genes (length proteins))
@@ -764,7 +693,6 @@
  (incf genomenumber)
  );progn
  );loop hash table *genomas*
-
  (dolist (f fusoes)
  (unless (eql (third f) nil)
  (setf *ppi-identified-gf* t)
@@ -794,17 +722,14 @@
  (return-from rosetta-stone ppi-fusoes)
  );let
  );defun
-
-;;Block of functions to predict ppis by Phylogenetic Profile
+;Block of functions to predict ppis by Phylogenetic Profile
 (declaim (ftype (function (cons cons) ) comparar-perfis))
 (defun comparar-perfis (lista1 lista2)
  (unless (eql nil (set-exclusive-or lista1 lista2 :test #'string=))
  (length(set-exclusive-or lista1 lista2 :test #'string=))
  ))
-
 (defparameter *phylogenetic-profiles-ppi* nil "Necessary to update two variables running lparallel:pmap")
 (defparameter *phylogenetic-profiles-ppi-by-score* nil "Necessary to update two variables running lparallel:pmap")
-
 (defun ppi-tolerance-null-by-score( g percentage-pp pesos-grupos &optional peso-setting)
  (let ( (dividendo) (divisor) (peso-grupo) )
  (setf dividendo (1+ (position-if #'(lambda (x) (= (third g) (third x))) pesos-grupos))
@@ -824,7 +749,6 @@
  (if (eq peso-setting :END) (setf g (nconc g (list peso-grupo))))
  nil
  ))
-
 (defun ppi-tolerance-null( g ppi percentage-pp pesos-grupos &optional peso-setting)
  (let ( (dividendo) (divisor) (peso-grupo) )
  (setf dividendo (1+ (position-if #'(lambda (x) (= (third g) (third x))) pesos-grupos))
@@ -843,14 +767,11 @@
  (if (eq peso-setting :END) (setf g (nconc g (list peso-grupo))))
  ppi
  ))
-
-
 (defun ppi-tolerance-notnull-by-score( g percentage-pp pesos-grupos)
  (let ( (dividendo) (divisor) (peso-grupo) (diferenca-perfis) )
  (setf dividendo (1+ (position-if #'(lambda (x) (= (third (first g)) (third (first x)))) pesos-grupos)))
  (setf divisor (length pesos-grupos))
  (setf peso-grupo (* (/ dividendo divisor) percentage-pp))
-
  (unless (= (third g) 1) (push (list peso-grupo (list)) *phylogenetic-profiles-ppi-by-score*))
  (dotimes (i (1- (third (first g))))
  (loop for j from (1+ i) to (1- (third (first g)))
@@ -862,7 +783,6 @@
  :position (second (elt (second (first g)) i)))
  *phylogenetic-profiles-ppi*)
  )))
-
  (dolist (grupo-similar (second g))
  (setf diferenca-perfis (comparar-perfis (first (first g)) (first grupo-similar)))
  (push (list (- peso-grupo (* peso-grupo (/ (/ (* diferenca-perfis 100) (length *genomes-files*)) 100)))
@@ -878,10 +798,8 @@
  ) ) )
  nil
  ))
-
 (defun ppi-tolerance-notnull( g ppi percentage-pp pesos-grupos)
  (let ( (dividendo) (divisor) (peso-grupo) (diferenca-perfis) )
-
  (setf dividendo (1+ (position-if #'(lambda (x) (= (third (first g)) (third (first x)))) pesos-grupos)))
  (setf divisor (length pesos-grupos))
  (setf peso-grupo (* (/ dividendo divisor) percentage-pp))
@@ -894,7 +812,6 @@
  :weight peso-grupo
  :position (second (elt (second (first g)) i)))
  ppi)) ) )
-
  (dolist (grupo-similar (second g))
  (setf diferenca-perfis (comparar-perfis (first (first g)) (first grupo-similar)))
  (dolist (ps (second grupo-similar))
@@ -907,111 +824,104 @@
  ppi)
  ) ) )
  ppi) )
-
 (defun calculate-redundancy (x)
-  (cond
-    ((< x 250) (round (* x 0.5)))
-    ((< x 3000 ) (round (* 167.49 (expt 0.999 x))))
-    (t 5)))
-
+ (cond
+ ((< x 250) (round (* x 0.5)))
+ ((< x 3000 ) (round (* 167.49 (expt 0.999 x))))
+ (t 5)))
 (defun replace-item (target item replacements)
-  (let ((pos (position item target)))
-    (when pos
-      (setq target (append (subseq target 0 pos)
-                           replacements
-                           (subseq target (1+ pos)))))))
+ (let ((pos (position item target)))
+ (when pos
+ (setq target (append (subseq target 0 pos)
+ replacements
+ (subseq target (1+ pos)))))))
 (defun substitute-node (target number node)
-  (let ( (header) (replacements) )
-    (if (and target node (> number 0))
-	(if (< number (length target))
-	    (progn
-	      (setf header (first (nth number target)))
-	      (loop for subnode in node do
-		    (setf replacements (append replacements (list (list header subnode (length subnode))))))
-	      (replace-item target (nth number target)  replacements)
-	      )))
-    ))
-
+ (let ( (header) (replacements) )
+ (if (and target node (> number 0))
+ (if (< number (length target))
+ (progn
+ (setf header (first (nth number target)))
+ (loop for subnode in node do
+ (setf replacements (append replacements (list (list header subnode (length subnode))))))
+ (replace-item target (nth number target) replacements)
+ )))
+ ))
 (defun shuffle-list (target)
-  (let ((copy (copy-list target)))
-    (loop for i downfrom (length copy) to 2 do
-          (rotatef (nth (random i) copy)
-                   (nth (1- i) copy)))
-    copy))
-
+ (let ((copy (copy-list target)))
+ (loop for i downfrom (length copy) to 2 do
+ (rotatef (nth (random i) copy)
+ (nth (1- i) copy)))
+ copy))
 (defun split-list (protein-list dividend redundants)
-  (let* ( (protein-list-shuffled (shuffle-list protein-list)) 
-         (n (length protein-list-shuffled) ) 
-          (sublist-size) (sublists) (pivotal-sublist) (non-pivotal-sublists) )
-    (if (and (< dividend n) (< redundants n))
-  	(progn
-	  (setf 
-           sublist-size (round (/ n dividend))
-           sublists (loop for i from 0 below n by sublist-size
-                          collect (subseq protein-list-shuffled i (min (+ i sublist-size) n)))
-           dividend (length sublists)
-	   )
-	  ;; Add redundants random elements from the non-pivotal sublists to the pivotal sublist
-	  (loop for pivotal-index from 0 to (- dividend 1) do
-		(setf pivotal-sublist (nth pivotal-index sublists)
-                      non-pivotal-sublists (remove pivotal-sublist sublists :test #'equal))
-		(dotimes ( _ redundants)
-		  ;; Check if there are any elements left to take from non-pivotal sublists
-		  (when (some #'identity non-pivotal-sublists)
-		    (let* ((source-sublist-index (random (length non-pivotal-sublists)))
-			   (source-sublist (nth source-sublist-index non-pivotal-sublists))
-			   (element-index) (element))
-                      ;; Proceed only if the source sublist is not empty
-                      (when source-sublist
-			(setf element-index (random (length source-sublist))
-                              element (nth element-index source-sublist))
-			;; Ensure the element is not already in the pivotal sublist
-			(unless (member element pivotal-sublist)
-			  (push element pivotal-sublist)
-			  ;; Remove the element from the source sublist
-			  (setf (nth source-sublist-index non-pivotal-sublists)
-				(remove element source-sublist :test #'equal)))))))
-		;; Update the pivotal sublist
-		(setf (nth pivotal-index sublists) pivotal-sublist))
-          ))
-    sublists))
-
+ (let* ( (protein-list-shuffled (shuffle-list protein-list))
+ (n (length protein-list-shuffled) )
+ (sublist-size) (sublists) (pivotal-sublist) (non-pivotal-sublists) )
+ (if (and (< dividend n) (< redundants n))
+ (progn
+ (setf
+ sublist-size (round (/ n dividend))
+ sublists (loop for i from 0 below n by sublist-size
+ collect (subseq protein-list-shuffled i (min (+ i sublist-size) n)))
+ dividend (length sublists)
+ )
+;Add redundants random elements from the non-pivotal sublists to the pivotal sublist
+ (loop for pivotal-index from 0 to (- dividend 1) do
+ (setf pivotal-sublist (nth pivotal-index sublists)
+ non-pivotal-sublists (remove pivotal-sublist sublists :test #'equal))
+ (dotimes ( _ redundants)
+;Check if there are any elements left to take from non-pivotal sublists
+ (when (some #'identity non-pivotal-sublists)
+ (let* ((source-sublist-index (random (length non-pivotal-sublists)))
+ (source-sublist (nth source-sublist-index non-pivotal-sublists))
+ (element-index) (element))
+;Proceed only if the source sublist is not empty
+ (when source-sublist
+ (setf element-index (random (length source-sublist))
+ element (nth element-index source-sublist))
+;Ensure the element is not already in the pivotal sublist
+ (unless (member element pivotal-sublist)
+ (push element pivotal-sublist)
+;Remove the element from the source sublist
+ (setf (nth source-sublist-index non-pivotal-sublists)
+ (remove element source-sublist :test #'equal)))))))
+;Update the pivotal sublist
+ (setf (nth pivotal-index sublists) pivotal-sublist))
+ ))
+ sublists))
 (defun normalize-phylogenetic-profiles-by-size ( grupos-identicos )
-  ;;splitting large grupos-identicos into smaller groups with redundant elements
-  (if grupos-identicos
-      (if *forest*
-      (let ( (howmany) )
-	(loop for grupo from 0 to (length grupos-identicos) do
-	      (setf howmany (third (nth grupo grupos-identicos)))
-	      (if howmany
-		  (if (> howmany 100)
-		      (setf grupos-identicos  (SUBSTITUTE-NODE
-					       grupos-identicos
-					       grupo
-					       (split-list (second (nth grupo grupos-identicos))
-							   (round (* howmany 0.950))
-							   (calculate-redundancy howmany))))
-		    ))))))
-  grupos-identicos
-  )
+;splitting large grupos-identicos into smaller groups with redundant elements
+ (if grupos-identicos
+ (if *forest*
+ (let ( (howmany) )
+ (loop for grupo from 0 to (length grupos-identicos) do
+ (setf howmany (third (nth grupo grupos-identicos)))
+ (if howmany
+ (if (> howmany 100)
+ (setf grupos-identicos (SUBSTITUTE-NODE
+ grupos-identicos
+ grupo
+ (split-list (second (nth grupo grupos-identicos))
+ (round (* howmany 0.950))
+ (calculate-redundancy howmany))))
+ ))))))
+ grupos-identicos
+ )
 (defun deduplicate-ppi-list (ppi-list)
-  (let ((seen (make-hash-table :test #'equalp))
-        (unique-ppi '()))
-    (dolist (ppi ppi-list)
-      (let ((genea (ppi-struct-genea ppi))
-            (geneb (ppi-struct-geneb ppi)))
-        (unless (gethash (list genea geneb) seen)
-          (push ppi unique-ppi)
-          (setf (gethash (list genea geneb) seen) t))))
-    (nreverse unique-ppi)))
-
+ (let ((seen (make-hash-table :test #'equalp))
+ (unique-ppi '()))
+ (dolist (ppi ppi-list)
+ (let ((genea (ppi-struct-genea ppi))
+ (geneb (ppi-struct-geneb ppi)))
+ (unless (gethash (list genea geneb) seen)
+ (push ppi unique-ppi)
+ (setf (gethash (list genea geneb) seen) t))))
+ (nreverse unique-ppi)))
 (defun deduplicate-ppi-hash-table (ppi-hash-table)
-  (maphash (lambda (key ppi-list)
-             (setf (gethash key ppi-hash-table)
-                   (deduplicate-ppi-list ppi-list)))
-           ppi-hash-table)
-  ppi-hash-table)
-
+ (maphash (lambda (key ppi-list)
+ (setf (gethash key ppi-hash-table)
+ (deduplicate-ppi-list ppi-list)))
+ ppi-hash-table)
+ ppi-hash-table)
 (declaim (ftype (function (single-float fixnum) ) phylogenetic-profiles-complete))
 (defun phylogenetic-profiles-complete (percentage-pp pptolerance)
  (defparameter *agrupamento-por-perfis-filos-identicos* (make-hash-table :test #'equalp)
@@ -1020,19 +930,18 @@
  "Tabela hash para fazer o relatório de perfis filogenéticos")
  (defparameter *pesos-grupos* (make-hash-table :test #'equalp)
  "Tabela hash para fazer o relatório de perfis filogenéticos")
- (let ((ppi (list));;List to store the interactions created.
+ (let ((ppi (list));List to store the interactions created.
  (grupos-identicos (list));List for storing protein groups with identical profiles.
  (grupos-similares (list));List for storing protein groups with identical and similar profiles.
  (pesos-grupos (list))
  (posicao-grupo);Variable to store the position of a group g.
- ;(number-proteins-max-group);Variável para armezar o número de proteínas do maior grupo.
+;(number-proteins-max-group);Variável para armezar o número de proteínas do maior grupo.
  (soma-grupos 0);Variable to store the total number of proteins between groups.
  (ppi-hash-table (make-hash-table :test #'equalp));Tabela hash para guardar a ppi de cada genoma.
  (laco 0)
  (genomenumber 0)
  (howmany 0)
  )
-
  (declare (type hash-table *agrupamento-por-perfis-filos-identicos*))
  (declare (type hash-table *agrupamento-por-perfis-filos-semelhantes*))
  (declare (type hash-table *pesos-grupos*))
@@ -1041,15 +950,13 @@
  (declare (type fixnum laco))
  (declare (type fixnum genomenumber))
  (declare (type fixnum howmany))
-
  (format t "~%Predicting ppi by phylogenetic profiles complete;~%")
  (format t "[05 10 15 20 25 30 35 40 45 50 55 60 65 70 75 80 85 90 95 100]%~%")
  (format *query-io* "[")
  (force-output *query-io*)
-
  (loop for k being the hash-keys in *perfil-filogenetico* using (hash-value perfis)
  do (progn
- ;;Grouping proteins by phylogenetic profile
+;Grouping proteins by phylogenetic profile
  (dolist (p perfis)
  (setf posicao-grupo (position-if #'(lambda (x) (eql nil (set-exclusive-or (second p) (first x) :test #'string=))) grupos-identicos))
  (if (eql posicao-grupo nil)
@@ -1057,36 +964,29 @@
  (push (list (first p) (third p)) (second (elt grupos-identicos posicao-grupo)))
  );if
  );dolist
- ;;End of Grouping
-
- ;;Ordering the proteins of each group
+;End of Grouping
+;Ordering the proteins of each group
  (dolist (g grupos-identicos)
- ;;Ordering the proteins of each group according to their index in the genoma.
+;Ordering the proteins of each group according to their index in the genoma.
  (setf (second g) (sort (second g) #'< :key #'second))
- ;;Concatenating to a group g, the size of group g.
+;Concatenating to a group g, the size of group g.
  (setf g (nconc g (list (length (second g)))))
  )
- 
  (unless (= (length grupos-identicos) 0)
  (cond
- ;;If the user only wants identical profiles
+;If the user only wants identical profiles
  ((= pptolerance 0)
  (progn
-
- ;;Ordering groups by size, from smallest to largest.
- ;;splitting large grupos-identicos into smaller groups with redundant elements
+;Ordering groups by size, from smallest to largest.
+;splitting large grupos-identicos into smaller groups with redundant elements
  (setf grupos-identicos (normalize-phylogenetic-profiles-by-size (sort grupos-identicos #'< :key #'third)))
-
- ;;Stored the groups in a hash table that will be used to make reports.
+;Stored the groups in a hash table that will be used to make reports.
  (setf (gethash k *agrupamento-por-perfis-filos-identicos*) grupos-identicos)
-
- ;;by storing the weights of each group in a hash table that will be used in the report.
+;by storing the weights of each group in a hash table that will be used in the report.
  (setf (gethash k *pesos-grupos*) (remove-duplicates grupos-identicos :key #'third))
-
- ;;Removing groups with the same amount of genes and assigning the result to the group weights list.
+;Removing groups with the same amount of genes and assigning the result to the group weights list.
  (setf pesos-grupos (remove-duplicates grupos-identicos :key #'third))
-
- ;;Generating interactions for each pair of proteins in each group.
+;Generating interactions for each pair of proteins in each group.
  (setf howmany (length grupos-identicos))
  (if (> howmany 0) (setf ppi (apply #'append
  (lparallel:pmap 'list #'ppi-tolerance-null
@@ -1098,24 +998,23 @@
  ))))
  );progn
  );condition and action 1
-
- ;;If the user wants to consider similar profiles
+;If the user wants to consider similar profiles
  ((> pptolerance 0)
-  (progn
- ;;Ordering groups by size, from smallest to largest.
- ;;splitting large grupos-identicos into smaller groups with redundant elements
+ (progn
+;Ordering groups by size, from smallest to largest.
+;splitting large grupos-identicos into smaller groups with redundant elements
  (setf grupos-identicos (normalize-phylogenetic-profiles-by-size (sort grupos-identicos #'< :key #'third)))
- ;;By adding to a group g, all groups similar to group g.
+;By adding to a group g, all groups similar to group g.
  (dotimes (i (1- (length grupos-identicos)))
  (setf grupos-similares (append grupos-similares (list (list (elt grupos-identicos i) (list )))))
  (setf soma-grupos (+ soma-grupos (third (elt grupos-identicos i))))
  (loop for j from (1+ i) to (1- (length grupos-identicos))
  do (progn
  (unless (> (comparar-perfis (first (elt grupos-identicos i)) (first (elt grupos-identicos j))) pptolerance)
- ;;Unless the difference between the profiles of a pair of groups is greater than the tolerated difference, make:
- ;;Adding to the gi group, the gj group, which is similar to the gi group.
+;Unless the difference between the profiles of a pair of groups is greater than the tolerated difference, make:
+;Adding to the gi group, the gj group, which is similar to the gi group.
  (push (elt grupos-identicos j) (second (elt grupos-similares i)))
- ;;Summing up the total amount of proteins between similar groups.
+;Summing up the total amount of proteins between similar groups.
  (setf soma-grupos (+ soma-grupos (third (elt grupos-identicos j))))
  );unlles
  );progn-do
@@ -1123,25 +1022,19 @@
  (setf (elt grupos-similares i) (nconc (elt grupos-similares i) (list soma-grupos)))
  (setf soma-grupos 0)
  );dotimes
-
- ;;Adding the last group that was not considered in the above dotimes, to the list of similar groups.
+;Adding the last group that was not considered in the above dotimes, to the list of similar groups.
  (setf grupos-similares (append grupos-similares (list (list (first (last grupos-identicos)) (list ) (length (second (first (last grupos-identicos))))))))
-
- ;;Ordering similar groups by size, from smallest to largest.
+;Ordering similar groups by size, from smallest to largest.
  (setf grupos-similares (sort grupos-similares #'< :key #'(lambda (x) (third (first x)))))
-
- ;;Stored the groups in a global hash table that will be used to make reports.
+;Stored the groups in a global hash table that will be used to make reports.
  (setf (gethash k *agrupamento-por-perfis-filos-semelhantes*) grupos-similares)
-
- ;;by storing the weights of each group in a hash table that will be used in the report.
+;by storing the weights of each group in a hash table that will be used in the report.
  (setf (gethash k *pesos-grupos*) (remove-duplicates grupos-similares :key #'(lambda (x) (third (first x)))))
-
- ;;Removing groups with the same amount of genes and assigning the result to the group weights list.
+;Removing groups with the same amount of genes and assigning the result to the group weights list.
  (setf pesos-grupos (remove-duplicates grupos-similares :key #'(lambda (x) (third (first x)))))
-
- ;;Sweeping the groups formed to create edges between identical and similar proteins.
+;Sweeping the groups formed to create edges between identical and similar proteins.
  (setf howmany (length grupos-similares))
- (if (> howmany 0) (setf 
+ (if (> howmany 0) (setf
  ppi (apply #'append (lparallel:pmap 'list #'ppi-tolerance-notnull
  grupos-similares
  (make-list howmany :initial-element ppi)
@@ -1152,71 +1045,63 @@
  );condition and action 2
  );cond
  );unless
-
- ;;If any ppi has been predicted, the identifier from ppi to true is changed.
+;If any ppi has been predicted, the identifier from ppi to true is changed.
  (if (> (length ppi) 0)
-     (progn
-       (setf ppi (deduplicate-ppi-list ppi)
-	     *ppi-identified-pp* t)
-       ))
-  ;;Configuring the ppi of the k genome in the hash table of ppi.
+ (progn
+ (setf ppi (deduplicate-ppi-list ppi)
+ *ppi-identified-pp* t)
+ ))
+;Configuring the ppi of the k genome in the hash table of ppi.
  (setf (gethash k ppi-hash-table) ppi)
- ;(setf (gethash k *agrupamento-por-perfis-filos-identicos*) ppi)
- 
- ;;Reconfiguring the variables.
+;(setf (gethash k *agrupamento-por-perfis-filos-identicos*) ppi)
+;Reconfiguring the variables.
  (setf grupos-identicos nil)
  (setf grupos-similares nil)
  (setf ppi nil)
-
  (dotimes (j (ceiling (- (* 60 (/ (/ (* (1+ genomenumber) 100) (hash-table-count *perfil-filogenetico*)) 100)) laco)))
  (format *query-io* "=")
  (force-output *query-io*)
  )
  (setf laco (ceiling (+ laco (- (* 60 (/ (/ (* (1+ genomenumber) 100) (hash-table-count *perfil-filogenetico*)) 100)) laco))))
  (incf genomenumber)
-
  );progn-loop
  );loop hash table
  (format t "]~%")
  (return-from phylogenetic-profiles-complete ppi-hash-table)
  ))
- ;-------------------------------------------------------------------------------
-
+;-------------------------------------------------------------------------------
 (defun phylogenetic-profiles-ppiterlimit (percentage-pp pptolerance ppiterlimit)
- (let ((ppi (list));;List to armthe interactions created.
+ (let ((ppi (list));List to store the interactions created.
  (grupos-identicos (list));List for storing protein groups with identical profiles.
  (grupos-similares (list));List for storing protein groups with identical and similar profiles.
  (pesos-grupos (list));List to store the weight that will be assigned to each group.
  (posicao-grupo);Variable to store the position of a group g.
- ;(number-proteins-max-group);Variável para armezar o número de proteínas do maior grupo.
- ;(max-proteins-group);Variável para armazenar o grupo com maior número de proteínas.
+;(number-proteins-max-group);Variável para armezar o número de proteínas do maior grupo.
+;(max-proteins-group);Variável para armazenar o grupo com maior número de proteínas.
  (soma-grupos 0);Variable to store the total number of proteins between groups.
  (total-arestas);Variable to store the sum of the total edges that each group will produce.
- ;(subtract);Variável para armazenar a quantidade total de arestas após exclusão do grupo mais populoso.
- ;(rest);Variável para calcular a quantidade de genes que serão aproveitados do grupo que será excluído.
- ;(cut-off index);Variável para armazenar o ídice que marca em qual posião o maior grupo será cortato.
+;(subtract);Variável para armazenar a quantidade total de arestas após exclusão do grupo mais populoso.
+;(rest);Variável para calcular a quantidade de genes que serão aproveitados do grupo que será excluído.
+;(cut-off index);Variável para armazenar o ídice que marca em qual posião o maior grupo será cortato.
  (ppi-hash-table (make-hash-table :test #'equalp));Tabela hash para guardar a ppi de cada genoma.
  (dividendo) (divisor) (peso-grupo)
  (laco 0)
  (genomenumber 0)
  (howmany 0)
  )
-
  (declare (type single-float percentage-pp))
  (declare (type fixnum laco))
  (declare (type fixnum genomenumber))
  (declare (type fixnum pptolerance))
  (declare (type fixnum ppiterlimit))
  (declare (type fixnum howmany))
-
  (format t "~%Predicting ppi by phylogenetic profiles iterlimit;~%")
  (format t "[05 10 15 20 25 30 35 40 45 50 55 60 65 70 75 80 85 90 95 100]%~%")
  (format *query-io* "[")
  (force-output *query-io*)
-
  (loop for k being the hash-keys in *perfil-filogenetico* using (hash-value perfis)
  do (progn
- ;;Grouping proteins by phylogenetic profile
+;Grouping proteins by phylogenetic profile
  (dolist (p perfis)
  (setf posicao-grupo (position-if #'(lambda (x) (eql nil (set-exclusive-or (second p) (first x) :test #'string=))) grupos-identicos))
  (if (eql posicao-grupo nil)
@@ -1224,25 +1109,21 @@
  (push (list (first p) (third p)) (second (elt grupos-identicos posicao-grupo)))
  );if
  );dolist
- ;;End of Grouping
-
- ;;Concatenando the size of each group g
+;End of Grouping
+;Concatenando the size of each group g
  (dolist (g grupos-identicos)
- ;;Concatenando to a group g, the size of group g.
+;Concatenando to a group g, the size of group g.
  (setf g (nconc g (list (length (second g)))))
  )
-
  (unless (= (length grupos-identicos) 0)
  (cond
- ;;If the user only wants identical profiles
+;If the user only wants identical profiles
  ((= pptolerance 0)
  (progn
-
- ;;Ordering groups by size, from smallest to largest.
- ;;splitting large grupos-identicos into smaller groups with redundant elements
+;Ordering groups by size, from smallest to largest.
+;splitting large grupos-identicos into smaller groups with redundant elements
  (setf grupos-identicos (normalize-phylogenetic-profiles-by-size (sort grupos-identicos #'< :key #'third)))
-
- ;;Block to exclude groups until the total edges produced are not higher than the threshold received
+;Block to exclude groups until the total edges produced are not higher than the threshold received
  (block remove-groups
  (loop
  (setf total-arestas (loop for i in grupos-identicos
@@ -1254,33 +1135,25 @@
  );if-total-edges < threshold
  );loop
  );block remove-groups
- ;;End of group removal
-
- ;;Ordering the proteins of each remaining group before creating interactions.
+;End of group removal
+;Ordering the proteins of each remaining group before creating interactions.
  (dolist (g grupos-identicos)
- ;;Ordering the proteins of each group according to their index in the genome.
+;Ordering the proteins of each group according to their index in the genome.
  (setf (second g) (sort (second g) #'< :key #'second))
  )
-
- ;;Ordering groups by size, from smallest to largest.
+;Ordering groups by size, from smallest to largest.
  (setf grupos-identicos (sort grupos-identicos #'< :key #'third))
-
- ;;Removing groups with the same amount of genes and assigning the result to the group weights list.
+;Removing groups with the same amount of genes and assigning the result to the group weights list.
  (setf pesos-grupos (remove-duplicates grupos-identicos :key #'third))
-
- ;;Generating interactions for each pair of proteins in each group.
+;Generating interactions for each pair of proteins in each group.
  (dolist (g grupos-identicos)
-
- ;;Picking up the group index of size equal to group g in the group weights list.
+;Picking up the group index of size equal to group g in the group weights list.
  (setf dividendo (1+ (position-if #'(lambda (x) (= (third g) (third x))) pesos-grupos)))
-
- ;;Picking up the index of the most populous group, that is, the last group.
+;Picking up the index of the most populous group, that is, the last group.
  (setf divisor (length pesos-grupos))
-
- ;;Calculating the weight of group g based on their position, and the position of the last group (most populous).
+;Calculating the weight of group g based on their position, and the position of the last group (most populous).
  (setf peso-grupo (* (/ dividendo divisor) percentage-pp))
-
- ;;Generating PPis for all pair of proteins in group g.
+;Generating PPis for all pair of proteins in group g.
  (dotimes (i (1- (length(second g))))
  (loop for j from (1+ i) to (1- (length(second g)))
  do (progn
@@ -1293,29 +1166,26 @@
  );progn-do
  );loop-dotimes
  );dotimes
- );;dolist identical groups
+ );dolist identical groups
  );progn
  );condition and action 1
-
- ;;If the user wants to consider similar profiles
+;If the user wants to consider similar profiles
  ((> pptolerance 0)
  (progn
-
- ;;Ordering groups by size, from smallest to largest.
- ;;splitting large grupos-identicos into smaller groups with redundant elements
+;Ordering groups by size, from smallest to largest.
+;splitting large grupos-identicos into smaller groups with redundant elements
  (setf grupos-identicos (normalize-phylogenetic-profiles-by-size (sort grupos-identicos #'< :key #'third)))
-
- ;;By adding to a group g, all groups similar to group g.
+;By adding to a group g, all groups similar to group g.
  (dotimes (i (1- (length grupos-identicos)))
  (setf grupos-similares (append grupos-similares (list (list (elt grupos-identicos i) (list )))))
  (setf soma-grupos (+ soma-grupos (third (elt grupos-identicos i))))
  (loop for j from (1+ i) to (1- (length grupos-identicos))
  do (progn
  (unless (> (comparar-perfis (first (elt grupos-identicos i)) (first (elt grupos-identicos j))) pptolerance)
- ;;Unless the difference between the profiles of a pair of groups is greater than the tolerated difference, make:
- ;;Adding to the gi group, the gj group, which is similar to the gi group.
+;Unless the difference between the profiles of a pair of groups is greater than the tolerated difference, make:
+;Adding to the gi group, the gj group, which is similar to the gi group.
  (push (elt grupos-identicos j) (second (elt grupos-similares i)))
- ;;Summing up the total amount of proteins between similar groups.
+;Summing up the total amount of proteins between similar groups.
  (setf soma-grupos (+ soma-grupos (third (elt grupos-identicos j))))
  );unlles
  );progn-do
@@ -1323,22 +1193,19 @@
  (setf (elt grupos-similares i) (nconc (elt grupos-similares i) (list soma-grupos)))
  (setf soma-grupos 0)
  );dotimes
-
- ;;Adding the last group that was not considered in the above dotimes, to the list of similar groups.
+;Adding the last group that was not considered in the above dotimes, to the list of similar groups.
  (setf grupos-similares (append grupos-similares (list (list (first (last grupos-identicos)) (list ) (length (second (first (last grupos-identicos))))))))
-
- ;;Ordering groups by size, from smallest to largest.
+;Ordering groups by size, from smallest to largest.
  (setf grupos-similares (sort grupos-similares #'< :key #'(lambda (x) (third (first x)))))
-
  (block remove-groups
  (loop
  (setf total-arestas (loop for g in grupos-similares
  summing (+
- ;;Calculating how many pairs of genes with identical profiles will be generated.
+;Calculating how many pairs of genes with identical profiles will be generated.
  (/ (* (length (second (first g))) (- (length (second (first g))) 1)) 2)
- ;;Multiplying the number of genes of identical profiles by the number of genes of similar profiles.
+;Multiplying the number of genes of identical profiles by the number of genes of similar profiles.
  (* (length (second (first g)))
- ;;Summing up the amount of genes from similar profiles.
+;Summing up the amount of genes from similar profiles.
  (loop for gs in (second g) summing (length (second gs)) into total finally (return total))
  );*
  );+
@@ -1351,22 +1218,18 @@
  );if-total-< edges
  );loop
  );block remove-groups
- ;;End of group removal
-
- ;;Ordering the proteins of each group according to their index in the genome.
+;End of group removal
+;Ordering the proteins of each group according to their index in the genome.
  (dolist (g grupos-similares)
  (setf (second (first g)) (sort (second (first g)) #'< :key #'second))
  )
-
- ;;Ordering similar groups by size, from smallest to largest.
+;Ordering similar groups by size, from smallest to largest.
  (setf grupos-similares (sort grupos-similares #'< :key #'(lambda (x) (third (first x)))))
-
- ;;Removing groups with the same amount of genes and assigning the result to the group weights list.
+;Removing groups with the same amount of genes and assigning the result to the group weights list.
  (setf pesos-grupos (remove-duplicates grupos-similares :key #'(lambda (x) (third (first x)))))
-
- ;;Sweeping the groups formed to create edges between identical and similar proteins.
+;Sweeping the groups formed to create edges between identical and similar proteins.
  (setf howmany (length grupos-similares))
- (if (> howmany 0) (setf 
+ (if (> howmany 0) (setf
  ppi (apply #'append (lparallel:pmap 'list #'ppi-tolerance-notnull
  grupos-similares
  (make-list howmany :initial-element ppi)
@@ -1377,63 +1240,56 @@
  );condition and action 2
  );cond
  );unless
-
- ;;If any ppi has been predicted, the identifier from ppi to true is changed.
+;If any ppi has been predicted, the identifier from ppi to true is changed.
 (if (> (length ppi) 0)
-     (progn
-       (setf ppi (deduplicate-ppi-list ppi)
-             *ppi-identified-pp* t)
-       ))
- ;; Configuring the ppi of the k genome in the ppi hash table.
+ (progn
+ (setf ppi (deduplicate-ppi-list ppi)
+ *ppi-identified-pp* t)
+ ))
+;Configuring the ppi of the k genome in the ppi hash table.
  (setf (gethash k ppi-hash-table) ppi)
-
- ;;Reconfiguring the variables.
+;Reconfiguring the variables.
  (setf grupos-identicos nil)
  (setf grupos-similares nil)
  (setf ppi nil)
-
  (dotimes (j (ceiling (- (* 60 (/ (/ (* (1+ genomenumber) 100) (hash-table-count *perfil-filogenetico*)) 100)) laco)))
  (format *query-io* "=")
  (force-output *query-io*)
  )
  (setf laco (ceiling (+ laco (- (* 60 (/ (/ (* (1+ genomenumber) 100) (hash-table-count *perfil-filogenetico*)) 100)) laco))))
  (incf genomenumber)
-
  );progn-loop
  );loop hash table
  (format t "]~%")
  (return-from phylogenetic-profiles-ppiterlimit ppi-hash-table)
  ))
- ;-------------------------------------------------------------------------------
+;-------------------------------------------------------------------------------
 (defun phylogenetic-profiles-trim (percentage-pp pptolerance trim)
  (let (
  (grupos-identicos (list));List for storing protein groups with identical profiles.
  (grupos-similares (list));List for storing protein groups with identical and similar profiles.
  (pesos-grupos (list))
  (posicao-grupo);Variable to store the position of a group g.
- ;(number-proteins-max-group);Variável para armezar o número de proteínas do maior grupo.
+;(number-proteins-max-group);Variável para armezar o número de proteínas do maior grupo.
  (soma-grupos 0);Variable to store the total number of proteins between groups.
  (ppi-hash-table (make-hash-table :test #'equalp));Tabela hash para guardar a ppi de cada genoma.
  (laco 0)
  (genomenumber 0)
  (howmany 0)
  )
-
  (declare (type single-float percentage-pp))
  (declare (type fixnum laco))
  (declare (type fixnum genomenumber))
  (declare (type fixnum pptolerance))
  (declare (type fixnum trim))
  (declare (type fixnum howmany))
-
  (format t "~%Predicting ppi by phylogenetic profiles;~%")
  (format t "[05 10 15 20 25 30 35 40 45 50 55 60 65 70 75 80 85 90 95 100]%~%")
  (format *query-io* "[")
  (force-output *query-io*)
-
  (loop for k being the hash-keys in *perfil-filogenetico* using (hash-value perfis)
  do (progn
- ;;Grouping proteins by phylogenetic profile
+;Grouping proteins by phylogenetic profile
  (dolist (p perfis)
  (setf posicao-grupo (position-if #'(lambda (x) (eql nil (set-exclusive-or (second p) (first x) :test #'string=))) grupos-identicos))
  (if (eql posicao-grupo nil)
@@ -1441,30 +1297,25 @@
  (push (list (first p) (third p)) (second (elt grupos-identicos posicao-grupo)))
  );if
  );dolist
- ;;End of Grouping
-
- ;;Ordering the proteins of each group and concatenating the size of the group
+;End of Grouping
+;Ordering the proteins of each group and concatenating the size of the group
  (dolist (g grupos-identicos)
- ;;Ordering the proteins of each group according to their index in the genome.
+;Ordering the proteins of each group according to their index in the genome.
  (setf (second g) (sort (second g) #'< :key #'second))
- ;;Concatenating to a group g, the size of group g.
+;Concatenating to a group g, the size of group g.
  (setf g (nconc g (list (length (second g)))))
  )
-
  (unless (= (length grupos-identicos) 0)
  (cond
- ;;If the user only wants identical profiles
+;If the user only wants identical profiles
  ((= pptolerance 0)
  (progn
-
- ;;Ordering groups by size, from smallest to largest.
- ;;splitting large grupos-identicos into smaller groups with redundant elements
+;Ordering groups by size, from smallest to largest.
+;splitting large grupos-identicos into smaller groups with redundant elements
  (setf grupos-identicos (normalize-phylogenetic-profiles-by-size (sort grupos-identicos #'< :key #'third)))
-
- ;;Removing groups with the same amount of genes and assigning the result to the group weights list.
+;Removing groups with the same amount of genes and assigning the result to the group weights list.
  (setf pesos-grupos (remove-duplicates grupos-identicos :key #'third))
-
- ;;Generating interactions for each pair of proteins in each group.
+;Generating interactions for each pair of proteins in each group.
  (setf howmany (length grupos-identicos))
  (if (> howmany 0)
  (lparallel:pmap 'list #'ppi-tolerance-null-by-score
@@ -1472,16 +1323,12 @@
  (make-list howmany :initial-element percentage-pp)
  (make-list howmany :initial-element pesos-grupos)
  ))
-
  (setf *phylogenetic-profiles-ppi-by-score* (remove-duplicates *phylogenetic-profiles-ppi-by-score* :test #'= :key #'first))
-
  (dolist (p *phylogenetic-profiles-ppi*)
-   (setf posicao-grupo (position-if #'(lambda (x) (= (ppi-struct-weight p) (first x))) *phylogenetic-profiles-ppi-by-score*))
-   (if posicao-grupo (push p (second (elt *phylogenetic-profiles-ppi-by-score* posicao-grupo))) )
+ (setf posicao-grupo (position-if #'(lambda (x) (= (ppi-struct-weight p) (first x))) *phylogenetic-profiles-ppi-by-score*))
+ (if posicao-grupo (push p (second (elt *phylogenetic-profiles-ppi-by-score* posicao-grupo))) )
  );dolist
-
  (setf *phylogenetic-profiles-ppi* nil)
-
  (dolist (p *phylogenetic-profiles-ppi-by-score*)
  (setf (second p) (sort (second p) #'< :key #'(lambda (x) (ppi-struct-position x))))
  (if (<= (length (second p)) trim)
@@ -1489,49 +1336,40 @@
  (setf *phylogenetic-profiles-ppi* (append *phylogenetic-profiles-ppi* (split-up-to (second p) trim)))
  );if
  );dolist
-
  (setf *phylogenetic-profiles-ppi-by-score* nil)
-
  );progn
  );condition and action 1
-
- ;;If the user wants to consider similar profiles
+;If the user wants to consider similar profiles
  ((> pptolerance 0)
  (progn
-
- ;;Ordering groups by size, from smallest to largest.
- ;;splitting large grupos-identicos into smaller groups with redundant elements
+;Ordering groups by size, from smallest to largest.
+;splitting large grupos-identicos into smaller groups with redundant elements
  (setf grupos-identicos (normalize-phylogenetic-profiles-by-size (sort grupos-identicos #'< :key #'third)))
-
- ;;Adding to a group g, all groups similar to group g.
+;Adding to a group g, all groups similar to group g.
  (dotimes (i (1- (length grupos-identicos)))
  (setf grupos-similares (append grupos-similares (list (list (elt grupos-identicos i) (list )))))
  (setf soma-grupos (+ soma-grupos (third (elt grupos-identicos i))))
  (loop for j from (1+ i) to (1- (length grupos-identicos))
  do (progn
  (unless (> (comparar-perfis (first (elt grupos-identicos i)) (first (elt grupos-identicos j))) pptolerance)
- ;;Unless the difference between the profiles of a pair of groups is greater than the tolerated difference, make:
-   ;;Adding to the gi group, the gj group, which is similar to the gi group.
-   (if i (push (elt grupos-identicos j) (second (elt grupos-similares i))))
-   ;;Summing up the total amount of proteins between similar groups.
-   (if j (setf soma-grupos (+ soma-grupos (third (elt grupos-identicos j)))))
+;Unless the difference between the profiles of a pair of groups is greater than the tolerated difference, make:
+;Adding to the gi group, the gj group, which is similar to the gi group.
+ (if i (push (elt grupos-identicos j) (second (elt grupos-similares i))))
+;Summing up the total amount of proteins between similar groups.
+ (if j (setf soma-grupos (+ soma-grupos (third (elt grupos-identicos j)))))
  );unlles
  );progn-do
  );loop-dotimes
  (if i (setf (elt grupos-similares i) (nconc (elt grupos-similares i) (list soma-grupos))))
  (setf soma-grupos 0)
  );dotimes
-
- ;;Adding the last group that was not considered in the above dotimes, to the list of similar groups.
+;Adding the last group that was not considered in the above dotimes, to the list of similar groups.
  (setf grupos-similares (append grupos-similares (list (list (first (last grupos-identicos)) (list ) (length (second (first (last grupos-identicos))))))))
-
- ;;Ordering similar groups by size, from smallest to largest.
+;Ordering similar groups by size, from smallest to largest.
  (setf grupos-similares (sort grupos-similares #'< :key #'(lambda (x) (third (first x)))))
-
- ;;Removing groups with the same amount of genes and assigning the result to the group weights list.
+;Removing groups with the same amount of genes and assigning the result to the group weights list.
  (setf pesos-grupos (remove-duplicates grupos-similares :key #'(lambda (x) (third (first x)))))
-
- ;;Sweeping the groups formed to create edges between identical and similar proteins.
+;Sweeping the groups formed to create edges between identical and similar proteins.
  (setf howmany (length grupos-similares))
  (if (> howmany 0)
  (lparallel:pmap 'list #'ppi-tolerance-notnull-by-score
@@ -1539,17 +1377,12 @@
  (make-list howmany :initial-element percentage-pp)
  (make-list howmany :initial-element pesos-grupos)
  ))
-
-
  (setf *phylogenetic-profiles-ppi-by-score* (remove-duplicates *phylogenetic-profiles-ppi-by-score* :test #'= :key #'first))
-
  (dolist (p *phylogenetic-profiles-ppi*)
-   (setf posicao-grupo (position-if #'(lambda (x) (= (ppi-struct-weight p) (first x))) *phylogenetic-profiles-ppi-by-score*))
-   (if posicao-grupo (push p (second (elt *phylogenetic-profiles-ppi-by-score* posicao-grupo))))
+ (setf posicao-grupo (position-if #'(lambda (x) (= (ppi-struct-weight p) (first x))) *phylogenetic-profiles-ppi-by-score*))
+ (if posicao-grupo (push p (second (elt *phylogenetic-profiles-ppi-by-score* posicao-grupo))))
  );dolist
-
  (setf *phylogenetic-profiles-ppi* nil)
-
  (dolist (p *phylogenetic-profiles-ppi-by-score*)
  (setf (second p) (sort (second p) #'< :key #'(lambda (x) (ppi-struct-position x))))
  (if (<= (length (second p)) trim)
@@ -1557,57 +1390,49 @@
  (setf *phylogenetic-profiles-ppi* (append *phylogenetic-profiles-ppi* (split-up-to (second p) trim)))
  );if
  );dolist
-
  (setf *phylogenetic-profiles-ppi-by-score* nil)
-
  );progn
  );condition and action 2
  );cond
  );unless
-
- ;;If any ppi has been predicted, the identifier from ppi to true is changed.
+;If any ppi has been predicted, the identifier from ppi to true is changed.
  (if (> (length *phylogenetic-profiles-ppi*) 0)
-     (progn
-       (setf *phylogenetic-profiles-ppi* (deduplicate-ppi-list *phylogenetic-profiles-ppi*)
-             *ppi-identified-pp* t)
-       ))
- ;;Configuring the ppi of the k genome in the hash table of ppi.
+ (progn
+ (setf *phylogenetic-profiles-ppi* (deduplicate-ppi-list *phylogenetic-profiles-ppi*)
+ *ppi-identified-pp* t)
+ ))
+;Configuring the ppi of the k genome in the hash table of ppi.
  (setf (gethash k ppi-hash-table) *phylogenetic-profiles-ppi*)
- ;(setf (gethash k *agrupamento-por-perfis-filos-identicos*) *phylogenetic-profiles-ppi*)
-
- ;;Reconfiguring the variables.
+;(setf (gethash k *agrupamento-por-perfis-filos-identicos*) *phylogenetic-profiles-ppi*)
+;Reconfiguring the variables.
  (setf grupos-identicos nil)
  (setf grupos-similares nil)
  (setf *phylogenetic-profiles-ppi* nil)
-
  (dotimes (j (ceiling (- (* 60 (/ (/ (* (1+ genomenumber) 100) (hash-table-count *perfil-filogenetico*)) 100)) laco)))
  (format *query-io* "=")
  (force-output *query-io*)
  )
  (setf laco (ceiling (+ laco (- (* 60 (/ (/ (* (1+ genomenumber) 100) (hash-table-count *perfil-filogenetico*)) 100)) laco))))
  (incf genomenumber)
-
  );progn-loop
  );loop hash table
  (format t "]~%")
  (return-from phylogenetic-profiles-trim ppi-hash-table)
  ))
- ;-------------------------------------------------------------------------------
-
+;-------------------------------------------------------------------------------
 (defun phylogenetic-profiles-threshold (percentage-pp pptolerance ppthreshold plusminus)
- (let ((ppi (list));;List to store the interactions created.
+ (let ((ppi (list));List to store the interactions created.
  (grupos-identicos (list));List for storing protein groups with identical profiles.
  (grupos-similares (list));List for storing protein groups with identical and similar profiles.
  (pesos-grupos (list))
  (posicao-grupo);Variable to store the position of a group g.
- ;(number-proteins-max-group);Variável para armezar o número de proteínas do maior grupo.
+;(number-proteins-max-group);Variável para armezar o número de proteínas do maior grupo.
  (soma-grupos 0);Variable to store the total number of proteins between groups.
  (ppi-hash-table (make-hash-table :test #'equalp));Tabela hash para guardar a ppi de cada genoma.
  (laco 0)
  (genomenumber 0)
  (howmany 0)
  )
-
  (declare (type single-float percentage-pp))
  (declare (type fixnum laco))
  (declare (type fixnum genomenumber))
@@ -1615,25 +1440,22 @@
  (declare (type fixnum ppthreshold))
  (declare (type (simple-array character (1)) plusminus))
  (declare (type fixnum howmany))
-
  (format t "~%Predicting ppi by phylogenetic profiles threshold;~%")
  (format t "[05 10 15 20 25 30 35 40 45 50 55 60 65 70 75 80 85 90 95 100]%~%")
  (format *query-io* "[")
  (force-output *query-io*)
-
  (loop for k being the hash-keys in *perfil-filogenetico* using (hash-value perfis)
  do (progn
- ;;Grouping proteins by phylogenetic profile
+;Grouping proteins by phylogenetic profile
  (dolist (p perfis)
  (setf posicao-grupo (position-if #'(lambda (x) (eql nil (set-exclusive-or (second p) (first x) :test #'string=))) grupos-identicos))
  (if (eql posicao-grupo nil)
- (progn (push (list (second p) (list (list (first p) (third p)))) grupos-identicos) #|(format t "entrou 1~%")|#)
- (progn (push (list (first p) (third p)) (second (elt grupos-identicos posicao-grupo))) #|(format t "entrou 2~%")|#)
+ (progn (push (list (second p) (list (list (first p) (third p)))) grupos-identicos)
+ (progn (push (list (first p) (third p)) (second (elt grupos-identicos posicao-grupo)))
  );if
  );dolist
- ;;End of Grouping
-
- ;;Discarding groups less than the threshold reported by the user.
+;End of Grouping
+;Discarding groups less than the threshold reported by the user.
  (if (string= plusminus "<")
  (dolist (g grupos-identicos)
  (unless (< (length (first g)) ppthreshold)
@@ -1646,29 +1468,24 @@
  );unless
  );dolist
  );if string=
-
- ;;Ordering the proteins of each group
+;Ordering the proteins of each group
  (dolist (g grupos-identicos)
- ;;Ordering the proteins of each group according to their index in the genome.
+;Ordering the proteins of each group according to their index in the genome.
  (setf (second g) (sort (second g) #'< :key #'second))
- ;;Concatenando to a group g, the size of group g.
+;Concatenando to a group g, the size of group g.
  (setf g (nconc g (list (length (second g)))))
  );dolist
-
  (unless (= (length grupos-identicos) 0)
  (cond
- ;;If the user only wants identical profiles
+;If the user only wants identical profiles
  ((= pptolerance 0)
  (progn
-
- ;;Ordering groups by size, from smallest to largest.
- ;;splitting large grupos-identicos into smaller groups with redundant elements
+;Ordering groups by size, from smallest to largest.
+;splitting large grupos-identicos into smaller groups with redundant elements
  (setf grupos-identicos (normalize-phylogenetic-profiles-by-size (sort grupos-identicos #'< :key #'third)))
-
- ;;Removing groups with the same amount of genes and assigning the result to the group weights list.
+;Removing groups with the same amount of genes and assigning the result to the group weights list.
  (setf pesos-grupos (remove-duplicates grupos-identicos :key #'third))
-
- ;;Generating interactions for each pair of proteins in each group.
+;Generating interactions for each pair of proteins in each group.
  (setf howmany (length grupos-identicos))
  (if (> howmany 0) (setf ppi (apply #'append
  (lparallel:pmap 'list #'ppi-tolerance-null
@@ -1679,26 +1496,23 @@
  )))
  ));progn
  );condition and action 1
-
- ;;If the user wants to consider similar profiles
+;If the user wants to consider similar profiles
  ((> pptolerance 0)
  (progn
-
- ;;Ordering groups by size, from smallest to largest.
- ;;splitting large grupos-identicos into smaller groups with redundant elements
+;Ordering groups by size, from smallest to largest.
+;splitting large grupos-identicos into smaller groups with redundant elements
  (setf grupos-identicos (normalize-phylogenetic-profiles-by-size (sort grupos-identicos #'< :key #'third)))
-
- ;;Adding to a group g, all groups similar to group g.
+;Adding to a group g, all groups similar to group g.
  (dotimes (i (1- (length grupos-identicos)))
  (setf grupos-similares (append grupos-similares (list (list (elt grupos-identicos i) (list )))))
  (setf soma-grupos (+ soma-grupos (third (elt grupos-identicos i))))
  (loop for j from (1+ i) to (1- (length grupos-identicos))
  do (progn
  (unless (> (comparar-perfis (first (elt grupos-identicos i)) (first (elt grupos-identicos j))) pptolerance)
- ;;Unless the difference between the profiles of a pair of groups is greater than the tolerated difference, make:
- ;;Adding to the gi group, the gj group, which is similar to the gi group.
+;Unless the difference between the profiles of a pair of groups is greater than the tolerated difference, make:
+;Adding to the gi group, the gj group, which is similar to the gi group.
  (push (elt grupos-identicos j) (second (elt grupos-similares i)))
- ;;Summing up the total amount of proteins between similar groups.
+;Summing up the total amount of proteins between similar groups.
  (setf soma-grupos (+ soma-grupos (third (elt grupos-identicos j))))
  );unlles
  );progn-do
@@ -1706,19 +1520,15 @@
  (setf (elt grupos-similares i) (nconc (elt grupos-similares i) (list soma-grupos)))
  (setf soma-grupos 0)
  );dotimes
-
- ;;Adding the last group that was not considered in the above dotimes, to the list of similar groups.
+;Adding the last group that was not considered in the above dotimes, to the list of similar groups.
  (setf grupos-similares (append grupos-similares (list (list (first (last grupos-identicos)) (list ) (length (second (first (last grupos-identicos))))))))
-
- ;;Ordering similar groups by size, from smallest to largest.
+;Ordering similar groups by size, from smallest to largest.
  (setf grupos-similares (sort grupos-similares #'< :key #'(lambda (x) (third (first x)))))
-
- ;;Removing groups with the same amount of genes and assigning the result to the group weights list.
+;Removing groups with the same amount of genes and assigning the result to the group weights list.
  (setf pesos-grupos (remove-duplicates grupos-similares :key #'(lambda (x) (third (first x)))))
-
- ;;Sweeping the groups formed to create edges between identical and similar proteins.
+;Sweeping the groups formed to create edges between identical and similar proteins.
  (setf howmany (length grupos-similares))
- (if (> howmany 0) (setf 
+ (if (> howmany 0) (setf
  ppi (apply #'append (lparallel:pmap 'list #'ppi-tolerance-notnull
  grupos-similares
  (make-list howmany :initial-element ppi)
@@ -1729,37 +1539,32 @@
  );condition and action 2
  );cond
  );unless
-
- ;;If any PPI has beenpredicted, the PPI identifier is changed to true.
+;If any PPI has beenpredicted, the PPI identifier is changed to true.
 (if (> (length ppi) 0)
-     (progn
-       (setf ppi (deduplicate-ppi-list ppi)
-             *ppi-identified-pp* t)
-       ))
- ;;Configuring the ppi of the k genome in the hash table of ppi.
+ (progn
+ (setf ppi (deduplicate-ppi-list ppi)
+ *ppi-identified-pp* t)
+ ))
+;Configuring the ppi of the k genome in the hash table of ppi.
  (setf (gethash k ppi-hash-table) ppi)
-
- ;;Reconfiguring the variables.
+;Reconfiguring the variables.
  (setf grupos-identicos nil)
  (setf grupos-similares nil)
  (setf ppi nil)
-
  (dotimes (j (ceiling (- (* 60 (/ (/ (* (1+ genomenumber) 100) (hash-table-count *perfil-filogenetico*)) 100)) laco)))
  (format *query-io* "=")
  (force-output *query-io*)
  )
  (setf laco (ceiling (+ laco (- (* 60 (/ (/ (* (1+ genomenumber) 100) (hash-table-count *perfil-filogenetico*)) 100)) laco))))
  (incf genomenumber)
-
  );progn-loop
  );loop hash table
  (format t "]~%")
  (return-from phylogenetic-profiles-threshold ppi-hash-table)
  ))
- ;-------------------------------------------------------------------------------
-
+;-------------------------------------------------------------------------------
 (defun phylogenetic-profiles-delete-clusters (percentage-pp grouplimit)
- (let ((ppi (list));;List to store the interactions created.
+ (let ((ppi (list));List to store the interactions created.
  (grupos-identicos (list));List for storing protein groups with identical profiles.
  (pesos-grupos (list))
  (posicao-grupo);Variable to store the position of a group g.
@@ -1768,21 +1573,18 @@
  (genomenumber 0)
  (howmany 0)
  )
-
  (declare (type single-float percentage-pp))
  (declare (type fixnum laco))
  (declare (type fixnum genomenumber))
  (declare (type fixnum grouplimit))
  (declare (type fixnum howmany))
-
  (format t "~%Predicting ppi by phylogenetic profiles delete clusters;~%")
  (format t "[05 10 15 20 25 30 35 40 45 50 55 60 65 70 75 80 85 90 95 100]%~%")
  (format *query-io* "[")
  (force-output *query-io*)
-
  (loop for k being the hash-keys in *perfil-filogenetico* using (hash-value perfis)
  do (progn
- ;;Grouping proteins by phylogenetic profile
+;Grouping proteins by phylogenetic profile
  (dolist (p perfis)
  (setf posicao-grupo (position-if #'(lambda (x) (eql nil (set-exclusive-or (second p) (first x) :test #'string=))) grupos-identicos))
  (if (eql posicao-grupo nil)
@@ -1790,33 +1592,27 @@
  (push (list (first p) (third p)) (second (elt grupos-identicos posicao-grupo)))
  );if
  );dolist
- ;;End of the Grouping
-
- ;;Removing groups that would produce an unwanted number of edges with the same score.
+;End of the Grouping
+;Removing groups that would produce an unwanted number of edges with the same score.
  (dolist (g grupos-identicos)
  (unless (<= (/ (* (length (second g)) (- (length (second g)) 1)) 2) grouplimit)
  (setf grupos-identicos (remove g grupos-identicos :test #'equalp))
  );unless
  );dolist
-
- ;;Ordering the proteins of each group
+;Ordering the proteins of each group
  (dolist (g grupos-identicos)
- ;;Ordering the proteins of each group according to their index in the genome.
+;Ordering the proteins of each group according to their index in the genome.
  (setf (second g) (sort (second g) #'< :key #'second))
- ;;Concatenando to a group g, the size of group g.
+;Concatenando to a group g, the size of group g.
  (setf g (nconc g (list (length (second g)))))
  )
-
  (unless (= (length grupos-identicos) 0)
  (progn
-
- ;;Ordering groups by size, from smallest to largest.
+;Ordering groups by size, from smallest to largest.
  (setf grupos-identicos (sort grupos-identicos #'< :key #'third))
-
- ;;Removing groups with the same amount of genes and assigning the result to the group weights list.
+;Removing groups with the same amount of genes and assigning the result to the group weights list.
  (setf pesos-grupos (remove-duplicates grupos-identicos :key #'third))
-
- ;;Generating interactions for each pair of proteins in each group.
+;Generating interactions for each pair of proteins in each group.
  (setf howmany (length grupos-identicos))
  (if (> howmany 0) (setf ppi (apply #'append
  (lparallel:pmap 'list #'ppi-tolerance-null
@@ -1827,21 +1623,18 @@
  ))))
  );progn
  );unless
-
- ;;If any PPI has beenpredicted, the PPI identifier is changed to true.
+;If any PPI has beenpredicted, the PPI identifier is changed to true.
 (if (> (length ppi) 0)
-     (progn
-       (setf ppi (deduplicate-ppi-list ppi)
-             *ppi-identified-pp* t)
-       ))
- ;;Configuring the ppi of the k genome in the hash table of ppi.
+ (progn
+ (setf ppi (deduplicate-ppi-list ppi)
+ *ppi-identified-pp* t)
+ ))
+;Configuring the ppi of the k genome in the hash table of ppi.
  (setf (gethash k ppi-hash-table) ppi)
- ;(setf (gethash k *agrupamento-por-perfis-filos-identicos*) ppi)
-
- ;;Reconfiguring the variables.
+;(setf (gethash k *agrupamento-por-perfis-filos-identicos*) ppi)
+;Reconfiguring the variables.
  (setf grupos-identicos nil)
  (setf ppi nil)
-
  (dotimes (j (ceiling (- (* 60 (/ (/ (* (1+ genomenumber) 100) (hash-table-count *perfil-filogenetico*)) 100)) laco)))
  (format *query-io* "=")
  (force-output *query-io*)
@@ -1853,37 +1646,32 @@
  (format t "]~%")
  (return-from phylogenetic-profiles-delete-clusters ppi-hash-table)
  ))
-
 (defun phylogenetic-profiles-delete-perfil (percentage-pp pptolerance string-perfis)
- (let ((ppi (list));;List to store the interactions created.
+ (let ((ppi (list));List to store the interactions created.
  (grupos-identicos (list));List for storing protein groups with identical profiles.
  (grupos-similares (list));List for storing protein groups with identical and similar profiles.
  (pesos-grupos (list))
  (perfis-indesejados (list))
  (perfil)
  (posicao-grupo);Variable to store the position of a group g.
- ;(number-proteins-max-group);Variável para armezar o número de proteínas do maior grupo.
+;(number-proteins-max-group);Variável para armezar o número de proteínas do maior grupo.
  (soma-grupos 0);Variable to store the total number of proteins between groups.
  (ppi-hash-table (make-hash-table :test #'equalp));Tabela hash para guardar a ppi de cada genoma.
  (laco 0)
  (genomenumber 0)
  (howmany 0)
  )
-
  (declare (type single-float percentage-pp))
  (declare (type fixnum laco))
  (declare (type fixnum genomenumber))
  (declare (type fixnum pptolerance))
  (declare (type fixnum howmany))
-
  (format t "~%Predicting ppi by phylogenetic profiles delete perfil;~%")
  (format t "[05 10 15 20 25 30 35 40 45 50 55 60 65 70 75 80 85 90 95 100]%~%")
  (format *query-io* "[")
  (force-output *query-io*)
-
  (setf string-perfis (concatenate 'string string-perfis ";"))
-
- ;;extracting unwanted string-profiles
+;extracting unwanted string-profiles
  (loop for c across string-perfis
  do (progn
  (if (char= c #\;)
@@ -1896,10 +1684,9 @@
  );if char=
  );progn
  );loop
-
  (loop for k being the hash-keys in *perfil-filogenetico* using (hash-value perfis)
  do (progn
- ;;Grouping proteins by phylogenetic profile
+;Grouping proteins by phylogenetic profile
  (dolist (p perfis)
  (setf posicao-grupo (position-if #'(lambda (x) (eql nil (set-exclusive-or (second p) (first x) :test #'string=))) grupos-identicos))
  (if (eql posicao-grupo nil)
@@ -1907,39 +1694,33 @@
  (push (list (first p) (third p)) (second (elt grupos-identicos posicao-grupo)))
  );if
  );dolist
- ;;End of the Grouping
-
- ;;Discarding unwanted profiles.
+;End of the Grouping
+;Discarding unwanted profiles.
  (dolist (g grupos-identicos)
  (dolist (p perfis-indesejados)
  (if (= p (length (first g)))
  (setf grupos-identicos (remove g grupos-identicos :test #'equalp))
  );if
  );dolist-unwanted profiles
- );;dolist groups-identical
-
- ;;Ordering the proteins of each group
+ );dolist identical groups
+;Ordering the proteins of each group
  (dolist (g grupos-identicos)
- ;;Ordering the proteins of each group according to their index in the genome.
+;Ordering the proteins of each group according to their index in the genome.
  (setf (second g) (sort (second g) #'< :key #'second))
- ;;Concatenando to a group g, the size of group g.
+;Concatenating to a group g, the size of group g.
  (setf g (nconc g (list (length (second g)))))
  );dolist
-
  (unless (= (length grupos-identicos) 0)
  (cond
- ;;If the user only wants identical profiles
+;If the user only wants identical profiles
  ((= pptolerance 0)
  (progn
-
- ;;Ordering groups by size, from smallest to largest.
- ;;splitting large grupos-identicos into smaller groups with redundant elements
+;Ordering groups by size, from smallest to largest.
+;splitting large grupos-identicos into smaller groups with redundant elements
  (setf grupos-identicos (normalize-phylogenetic-profiles-by-size (sort grupos-identicos #'< :key #'third)))
-
- ;;Removing groups with the same amount of genes and attributing the result to the list weights-groups.
+;Removing groups with the same amount of genes and attributing the result to the list weights-groups.
  (setf pesos-grupos (remove-duplicates grupos-identicos :key #'third))
-
- ;;Generating interactions for each pair of proteins of each group.
+;Generating interactions for each pair of proteins of each group.
  (setf howmany (length grupos-identicos))
  (if (> howmany 0) (setf ppi (apply #'append
  (lparallel:pmap 'list #'ppi-tolerance-null
@@ -1950,26 +1731,23 @@
  ))))
  );progn
  );condition and action 1
-
- ;;If the user wants to consider similar profiles
+;If the user wants to consider similar profiles
  ((> pptolerance 0)
  (progn
-
- ;;Ordering groups by size, from smallest to largest.
- ;;splitting large grupos-identicos into smaller groups with redundant elements
+;Ordering groups by size, from smallest to largest.
+;splitting large grupos-identicos into smaller groups with redundant elements
  (setf grupos-identicos (normalize-phylogenetic-profiles-by-size (sort grupos-identicos #'< :key #'third)))
-
- ;;Adding to a group g, all groups similar to group g.
+;Adding to a group g, all groups similar to group g.
  (dotimes (i (1- (length grupos-identicos)))
  (setf grupos-similares (append grupos-similares (list (list (elt grupos-identicos i) (list )))))
  (setf soma-grupos (+ soma-grupos (third (elt grupos-identicos i))))
  (loop for j from (1+ i) to (1- (length grupos-identicos))
  do (progn
  (unless (> (comparar-perfis (first (elt grupos-identicos i)) (first (elt grupos-identicos j))) pptolerance)
- ;;Unless the difference between the profiles of a pair of groups is greater than the tolerated difference, make:
- ;;Adding to the gi group, the gj group, which is similar to the gi group.
+;Unless the difference between the profiles of a pair of groups is greater than the tolerated difference, make:
+;Adding to the gi group, the gj group, which is similar to the gi group.
  (push (elt grupos-identicos j) (second (elt grupos-similares i)))
- ;;Summing up the total amount of proteins between similar groups.
+;Summing up the total amount of proteins between similar groups.
  (setf soma-grupos (+ soma-grupos (third (elt grupos-identicos j))))
  );unlles
  );progn-do
@@ -1977,17 +1755,13 @@
  (setf (elt grupos-similares i) (nconc (elt grupos-similares i) (list soma-grupos)))
  (setf soma-grupos 0)
  );dotimes
-
- ;;Aggregating the last group that was not considered in the above dotimes, to the list of similar groups.
+;Aggregating the last group that was not considered in the above dotimes, to the list of similar groups.
  (setf grupos-similares (append grupos-similares (list (list (first (last grupos-identicos)) (list ) (length (second (first (last grupos-identicos))))))))
-
- ;;Ordering similar groups by size, from smallest to largest.
+;Ordering similar groups by size, from smallest to largest.
  (setf grupos-similares (sort grupos-similares #'< :key #'(lambda (x) (third (first x)))))
-
- ;;Removing groups with the same amount of genes and attributing the result to the list of group weights.
+;Removing groups with the same amount of genes and attributing the result to the list of group weights.
  (setf pesos-grupos (remove-duplicates grupos-similares :key #'(lambda (x) (third (first x)))))
-
- ;;Sweeping the groups formed to create edges between identical and similar proteins.
+;Sweeping the groups formed to create edges between identical and similar proteins.
  (setf howmany (length grupos-similares))
  (if (> howmany 0) (setf ppi (apply #'append (lparallel:pmap 'list #'ppi-tolerance-notnull
  grupos-similares
@@ -1995,73 +1769,66 @@
  (make-list howmany :initial-element percentage-pp)
  (make-list howmany :initial-element pesos-grupos)
  ))))
-
  );progn
  );condition and action 2
  );cond
  );unless
-
- ;;If any PPI has beenpredicted, the PPI identifier is changed to true.
+;If any PPI has beenpredicted, the PPI identifier is changed to true.
 (if (> (length ppi) 0)
-     (progn
-       (setf ppi (deduplicate-ppi-list ppi)
-             *ppi-identified-pp* t)
-       ))
- ;;Configuring the ppi of the k genome in the hash table of ppi.
+ (progn
+ (setf ppi (deduplicate-ppi-list ppi)
+ *ppi-identified-pp* t)
+ ))
+;Configuring the ppi of the k genome in the hash table of ppi.
  (setf (gethash k ppi-hash-table) ppi)
- ;(setf (gethash k *agrupamento-por-perfis-filos-identicos*) ppi)
-
- ;;Reconfiguring the variables.
+;(setf (gethash k *agrupamento-por-perfis-filos-identicos*) ppi)
+;Reconfiguring the variables.
  (setf grupos-identicos nil)
  (setf grupos-similares nil)
  (setf ppi nil)
-
  (dotimes (j (ceiling (- (* 60 (/ (/ (* (1+ genomenumber) 100) (hash-table-count *perfil-filogenetico*)) 100)) laco)))
  (format *query-io* "=")
  (force-output *query-io*)
  )
  (setf laco (ceiling (+ laco (- (* 60 (/ (/ (* (1+ genomenumber) 100) (hash-table-count *perfil-filogenetico*)) 100)) laco))))
  (incf genomenumber)
-
  );progn-loop
  );loop hash table
  (format t "]~%")
  (return-from phylogenetic-profiles-delete-perfil ppi-hash-table)
  ))
-;;------------------------------------------------------------------------------
-
+;------------------------------------------------------------------------------
 (defun execute-expansion-fixed ( pesos genomas pivo-um pivo-dois w1 aadifflimit checkpointminlimit )
  (let ( (conservacao) )
-
  (if (and pivo-um pivo-dois (second pivo-um) (second pivo-dois) )
  (progn
- ;;Expansion Loop
+;Expansion Loop
  (loop for i from 1 to w1
  do (progn
  (setf conservacao nil)
  (cond
- ;condition and the 1
+;condition and the 1
  ((and (< (+ (second pivo-um) i) (length (gethash (first pivo-um) *genomas*)))
  (< (+ (second pivo-dois) i) (length (gethash (first pivo-dois) *genomas*))))
  (if (similar-test (elt (gethash (first pivo-um) *genomas*) (+ (second pivo-um) i))
  (elt (gethash (first pivo-dois) *genomas*) (+ (second pivo-dois) i))
  aadifflimit checkpointminlimit)(setf conservacao t));if similar-test
  );and 1
- ;condition andthe 2
+;condition andthe 2
  ((and (>= (+ (second pivo-um) i) (length (gethash (first pivo-um) *genomas*)))
  (< (+ (second pivo-dois) i) (length (gethash (first pivo-dois) *genomas*))))
  (if (similar-test (elt (gethash (first pivo-um) *genomas*) (- (+ (second pivo-um) i) (length (gethash (first pivo-um) *genomas*))))
  (elt (gethash (first pivo-dois) *genomas*) (+ (second pivo-dois) i))
  aadifflimit checkpointminlimit)(setf conservacao t));if similar-test
  );and 2
- ;condition and 3
+;condition and 3
  ((and (< (+ (second pivo-um) i) (length (gethash (first pivo-um) *genomas*)))
  (>= (+ (second pivo-dois) i) (length (gethash (first pivo-dois) *genomas*))))
  (if (similar-test (elt (gethash (first pivo-um) *genomas*) (+ (second pivo-um) i))
  (elt (gethash (first pivo-dois) *genomas*) (- (+ (second pivo-dois) i) (length (gethash (first pivo-dois) *genomas*))))
  aadifflimit checkpointminlimit)(setf conservacao t));if similar-test
  );condition and 3
- ;condition andthe 4
+;condition andthe 4
  ((and (>= (+ (second pivo-um) i) (length (gethash (first pivo-um) *genomas*)))
  (>= (+ (second pivo-dois) i) (length (gethash (first pivo-dois) *genomas*))))
  (if (similar-test (elt (gethash (first pivo-um) *genomas*) (- (+ (second pivo-um) i) (length (gethash (first pivo-um) *genomas*))))
@@ -2069,22 +1836,22 @@
  aadifflimit checkpointminlimit)(setf conservacao t));if similar-test
  );and 4
  );Cond End
- ;Block of actions for when a gene conservation is found in the expansion
+;Block of actions for when a gene conservation is found in the expansion
  (if (eql conservacao t)
  (progn
- ;;If there is a conservation found, increase the weights of the conservation report.
+;If there is a conservation found, increase the weights of the conservation report.
  (incf (first (elt pesos (1- i))))
  (unless (or (equalp (first pivo-um) (first pivo-dois))
  (if (find-if #'(lambda (x) (equalp x (list (1- i) (first pivo-dois)))) genomas) t nil)
  );or
- ;;Unless pivot gene 1 is in the same genome as pivot 2 gene, or pivot 2 gene
- ;;is in another genome, but preserved gene neighborhood has already been contained
- ;;in this genome, make:
- ;;The weight for each preserved gene neighborhood between genomes increases
- ;;different.
+;Unless pivot gene 1 is in the same genome as pivot 2 gene, or pivot 2 gene
+;is in another genome, but preserved gene neighborhood has already been contained
+;in this genome, make:
+;The weight for each preserved gene neighborhood between genomes increases
+;different.
  (incf (second (elt pesos (1- i))))
- ;;The following is stored the genomes in which the preserved genic neighbourhood was contained so that the weight does not
- ;;is incremented again if another conservatised genic neighborhood is contained in that same genome.
+;The following is stored the genomes in which the preserved genic neighbourhood was contained so that the weight does not
+;is incremented again if another conservatised genic neighborhood is contained in that same genome.
  (push (list (1- i) (first pivo-dois)) genomas)
  );unless
  );progn
@@ -2092,12 +1859,9 @@
  );prong expansion
  );End expansion loop
  ))
- ;End expansion dolist
-
+;End expansion dolist
  ))
-
-
-;;Function block to predict ppis per conserved gene neighborhood
+;Function block to predict ppis per conserved gene neighborhood
 (declaim (ftype (function (single-float fixnum fixnum fixnum fixnum fixnum fixnum fixnum fixnum fixnum fixnum) ) conserved-neighbourhood-fixed))
 (defun conserved-neighbourhood-fixed(percentage-cn w1 cw1 w2 cw2 w3 cw3 w4 cw4 aadifflimit checkpointminlimit)
  (defparameter *relatorio-vizinhanca-genica* (make-hash-table :test #'equalp)
@@ -2106,7 +1870,7 @@
  (defstruct expansao localidade conservacoes)
  (let((ppi (make-hash-table :test #'equalp));Tabela hash para armazenar as PPIs constatadas
  (genomas (list));List for storing genomes in which gene conservation has been contacted
- (pivo-um);;Variable to store each pangenome pivot protein
+ (pivo-um);Variable to store each pangenome pivot protein
  (pesos);Variable to store the forces of interactions between proteins
  (qtd-ppi);Variable to account for the preserved neighborhood number identified
  (interaction)
@@ -2114,7 +1878,6 @@
  (laco 0)
  (genomenumber 0)
  (howmany ))
-
  (declare (type hash-table *relatorio-vizinhanca-genica*))
  (declare (type single-float percentage-cn))
  (declare (type fixnum w1))
@@ -2129,15 +1892,13 @@
  (declare (type fixnum checkpointminlimit))
  (declare (type fixnum laco))
  (declare (type fixnum genomenumber))
-
  (format t "~%Predicting ppi by conserved gene neighborhood;~%")
  (format t "[05 10 15 20 25 30 35 40 45 50 55 60 65 70 75 80 85 90 95 100]%~%")
  (format *query-io* "[")
  (force-output *query-io*)
-
- ;;O loop a seguir varre a tabela hash *pan-genoma* e para cada proteína verifica-se
- ;;if there is protein similarity between your right neighborhood and the right neighborhood
- ;;of proteins similar to it.
+;O loop a seguir varre a tabela hash *pan-genoma* e para cada proteína verifica-se
+;if there is protein similarity between your right neighborhood and the right neighborhood
+;of proteins similar to it.
  (loop for k being the hash-keys in *pan-genoma* using (hash-value v)
  do (progn
  (setf pivo-um (proteina-localidade v))
@@ -2146,7 +1907,7 @@
  (setf qtd-ppi 0)
  (setf howmany (length (proteina-similares v)))
  (if (> howmany 0)
- ;;Sweeps the list ofprotein s similar(pivot-2) to each pangenome protein (pivot-one)
+;Sweeps the list ofprotein s similar(pivot-2) to each pangenome protein (pivot-one)
  (lparallel:pmap 'list #'execute-expansion-fixed
  (make-list howmany :initial-element pesos)
  (make-list howmany :initial-element genomas)
@@ -2155,29 +1916,26 @@
  (make-list howmany :initial-element w1)
  (make-list howmany :initial-element aadifflimit)
  (make-list howmany :initial-element checkpointminlimit) ))
-
  (setf (gethash k *relatorio-vizinhanca-genica*)
  (make-expansao :localidade pivo-um
  :conservacoes pesos
  );make-protein
- );;setf report-neighborhood-genic
-
- ;;Checking how many preserved genes exist within the expansion window
+ );setf report-neighborhood-genic
+;Checking how many preserved genes exist within the expansion window
  (cond
- ;If there is at least cw1 (required number of genes stored) in the size window w1
+;If there is at least cw1 (required number of genes stored) in the size window w1
  ((>= (count-if #'(lambda (x) (> (first x) 1)) pesos) cw1) (setf qtd-ppi w1))
- ;If there is at least cw2 (required number of genes stored) in the size window w2
+;If there is at least cw2 (required number of genes stored) in the size window w2
  ((>= (count-if #'(lambda (x) (> (first x) 1)) (split-up-to pesos w2)) cw2) (setf qtd-ppi w2))
- ;If there is at least cw3 (required number of genes conserved) in the size window w3
+;If there is at least cw3 (required number of genes conserved) in the size window w3
  ((>= (count-if #'(lambda (x) (> (first x) 1)) (split-up-to pesos w3)) cw3) (setf qtd-ppi w3))
- ;If there is at least cw4 (required number of genes stored) in the size window w4
+;If there is at least cw4 (required number of genes stored) in the size window w4
  ((>= (count-if #'(lambda (x) (> (first x) 1)) (split-up-to pesos w4)) cw4) (setf qtd-ppi w4))
  );cond
-
- ;;Unless you have no gene stored in the 10 window, make:------------------------------------------------------------
+;Unless you have no gene stored in the 10 window, make:------------------------------------------------------------
  (unless (= qtd-ppi 0)
  (setf *ppi-identified-cn* t)
- ;;Creating edges between the pivot gene and the other genes in the expansion window:---------------------------------------------------
+;Creating edges between the pivot gene and the other genes in the expansion window:---------------------------------------------------
  (dotimes (i qtd-ppi)
  (setf (gethash (first pivo-um) ppi)
  (append (gethash (first pivo-um) ppi)
@@ -2193,8 +1951,7 @@
  );append
  );setf
  );dotimes
-
- ;;Creating edges between genes not conserved within expansion window:----------------------------------------------------
+;Creating edges between genes not conserved within expansion window:----------------------------------------------------
  (dotimes (i (1- qtd-ppi))
  (unless (> (first (elt pesos i)) 1)
  (loop for j from (1+ i) to (1- qtd-ppi)
@@ -2212,7 +1969,7 @@
  (- (+ (second pivo-um) (+ i 1)) (length (gethash (first pivo-um) *genomas*)))
  ))
  );setf interaction
- ;;This if is to prevent duplication of interactions in ppi
+;This if is to prevent duplication of interactions in ppi
  (if (and (eql nil (find-if #'(lambda (x) (and
  (equalp (ppi-struct-genea interaction) (ppi-struct-genea x))
  (equalp (ppi-struct-geneb interaction) (ppi-struct-geneb x))
@@ -2221,7 +1978,7 @@
  (gethash (first pivo-um) ppi)))
  (eql nil (gethash (ppi-struct-genea interaction) *pan-genoma*))
  );and
- ;;If the interaction of the time is no longer contained in ppi,and if the pi protein is notcontained in the pangenome,make:
+;If the interaction of the time is no longer contained in ppi,and if the pi protein is notcontained in the pangenome,make:
  (setf (gethash (first pivo-um) ppi) (append (gethash (first pivo-um) ppi) (list interaction)))
  );if and
  );progn
@@ -2229,18 +1986,15 @@
  );unless
  );dotimes
  );unless
-
  (dotimes (j (ceiling (- (* 60 (/ (/ (* (1+ genomenumber) 100) (hash-table-count *pan-genoma*)) 100)) laco)))
  (format *query-io* "=")
  (force-output *query-io*)
  )
  (setf laco (ceiling (+ laco (- (* 60 (/ (/ (* (1+ genomenumber) 100) (hash-table-count *pan-genoma*)) 100)) laco))))
  (incf genomenumber)
-
  );Fim do bloco de acoes para cada iteracao na tabela hash *pan-genoma*
  );Fim do loop na tabela hash *pan-genoma*
-
- ;;Normalizing the weights of the edges by the greater weight of each genome
+;Normalizing the weights of the edges by the greater weight of each genome
  (loop for k being the hash-keys in ppi using (hash-value v)
  do (progn
  (setf maior-peso (loop for i in v
@@ -2250,16 +2004,14 @@
  (setf (ppi-struct-weight p) (* (/ (ppi-struct-weight p) maior-peso) percentage-cn))
  ));progn
  );loop
-
  (format t "]~%")
  (return-from conserved-neighbourhood-fixed ppi)
  ))
- ;-------------------------------------------------------------------------------
+;-------------------------------------------------------------------------------
 (defun execute-expansion-dynamic ( pesos genomas pivo-um pivo-dois ws aadifflimit checkpointminlimit )
  (let ( (conservacao) (pos) (total-expancoes) )
  (if (and pivo-um pivo-dois (second pivo-um) (second pivo-dois) )
  (progn
-
  (block expancao
  (setf total-expancoes 0)
  (setf pos 0)
@@ -2272,48 +2024,40 @@
  (= total-expancoes (1- (length (gethash (first pivo-dois) *genomas*)))))
  (return-from expancao))
  (cond
- ;condition 1 
+;condition 1
  ((and (< (+ (second pivo-um) (+ pos i)) (length (gethash (first pivo-um) *genomas*)))
  (< (+ (second pivo-dois) (+ pos i)) (length (gethash (first pivo-dois) *genomas*))))
-
  (if (similar-test (elt (gethash (first pivo-um) *genomas*) (+ (second pivo-um) (+ pos i)))
  (elt (gethash (first pivo-dois) *genomas*) (+ (second pivo-dois) (+ pos i)))
  aadifflimit checkpointminlimit)(setf conservacao t))
- ); and 1 
-
- ;condition 2 
+ );and 1
+;condition 2
  ((and (>= (+ (second pivo-um) (+ pos i)) (length (gethash (first pivo-um) *genomas*)))
  (< (+ (second pivo-dois) (+ pos i)) (length (gethash (first pivo-dois) *genomas*))))
-
  (if (similar-test (elt (gethash (first pivo-um) *genomas*) (- (+ (second pivo-um) (+ pos i)) (length (gethash (first pivo-um) *genomas*))))
  (elt (gethash (first pivo-dois) *genomas*) (+ (second pivo-dois) (+ pos i)))
  aadifflimit checkpointminlimit)(setf conservacao t))
- );condition 2 
-
- ;condition 3
+ );condition 2
+;condition 3
  ((and (< (+ (second pivo-um) (+ pos i)) (length (gethash (first pivo-um) *genomas*)))
  (>= (+ (second pivo-dois) (+ pos i)) (length (gethash (first pivo-dois) *genomas*))))
-
  (if (similar-test (elt (gethash (first pivo-um) *genomas*) (+ (second pivo-um) (+ pos i)))
  (elt (gethash (first pivo-dois) *genomas*) (- (+ (second pivo-dois) (+ pos i)) (length (gethash (first pivo-dois) *genomas*))))
  aadifflimit checkpointminlimit)(setf conservacao t))
- ); and 3 
-
- ; and 4 
+ );and 3
+;and 4
  ((and (>= (+ (second pivo-um) (+ pos i)) (length (gethash (first pivo-um) *genomas*)))
  (>= (+ (second pivo-dois) (+ pos i)) (length (gethash (first pivo-dois) *genomas*))))
-
  (if (similar-test (elt (gethash (first pivo-um) *genomas*) (- (+ (second pivo-um) (+ pos i)) (length (gethash (first pivo-um) *genomas*))))
  (elt (gethash (first pivo-dois) *genomas*) (- (+ (second pivo-dois) (+ pos i)) (length (gethash (first pivo-dois) *genomas*))))
  aadifflimit checkpointminlimit)(setf conservacao t))
- ); and 4 
+ );and 4
  );cond
-
- ;Block of actions for when a gene conservation is found in the expansionof
+;Block of actions for when a gene conservation is found in the expansionof
  (if (eql conservacao t)
  (progn
- ;;Block code for reporting purposes
- ;;Expanding the size of the relative-de-conservation if necessary
+;Block code for reporting purposes
+;Expanding the size of the relative-de-conservation if necessary
  (unless (>= (length (split-after pesos (+ pos i))) ws)
  (setf pesos (append pesos
  (loop for i from 1 to
@@ -2322,38 +2066,35 @@
  );append
  );setf
  );unless
- ;;If there is a conservation found, increase the weights of the conservation report.
+;If there is a conservation found, increase the weights of the conservation report.
  (incf (first (elt pesos (+ pos (1- i)))))
- ;;End of code block for reporting purposes
-
- ;;Unless the similar protein is in the same genome as the protein analyzed, or if the protein
- ;;similar is in another genome, but preserved gene neighborhood has already been reported
- ;;in this genome, make:
+;End of code block for reporting purposes
+;Unless the similar protein is in the same genome as the protein analyzed, or if the protein
+;similar is in another genome, but preserved gene neighborhood has already been reported
+;in this genome, make:
  (unless (or (equalp (first pivo-um) (first pivo-dois))
  (if (find-if #'(lambda (x) (equalp x (list (+ pos (1- i)) (first pivo-dois)))) genomas) t nil)
  );or
-
  (incf (second (elt pesos (+ pos (1- i)))))
- ;;The following is stored the genomes in which the preserved genic neighbourhood was contained so that the weight does not
- ;;is incremented again if another conservatised genic a neighborhood is contained in that same genome.
+;The following is stored the genomes in which the preserved genic neighbourhood was contained so that the weight does not
+;is incremented again if another conservatised genic a neighborhood is contained in that same genome.
  (push (list (+ pos (1- i)) (first pivo-dois)) genomas)
  );unless
  (setf pos (+ pos i))
  (setf i ws)
  );progn
- ;;If there is no gene conservation in the expansion,make:
- (if (= i ws); Se já expandiu até o limite da ws, encerra-se a expanção.
+;If there is no gene conservation in the expansion,make:
+ (if (= i ws);Se já expandiu até o limite da ws, encerra-se a expanção.
  (return-from expancao))
  );if gene conservation finding
  (setf conservacao nil)
  );progn
  );loop janena
- ); loop expanção
- ); Fim bloco expanção
+ );loop expanção
+ );Fim bloco expanção
  ))
  ))
-
-;;Two function to predict ppis per conserved gene neighborhood
+;Two function to predict ppis per conserved gene neighborhood
 (declaim (ftype (function (single-float fixnum fixnum fixnum) ) conserved-neighbourhood-dynamic))
 (defun conserved-neighbourhood-dynamic(percentage-cn ws aadifflimit checkpointminlimit)
  (defparameter *relatorio-vizinhanca-genica* (make-hash-table :test #'equalp)
@@ -2361,16 +2102,15 @@
  e não conservados para cada expanção de um gene pivô do pan-genoma")
  (defstruct expansao localidade conservacoes)
  (let ((ppi (make-hash-table :test #'equalp));Lista para armazenar as PPIs constatadas
- (pivo-um);;Variable to store each pangenome pivot protein
+ (pivo-um);Variable to store each pangenome pivot protein
  (pesos);Variable to store the forces of interactions between proteins.
- (genomas (list));;List to assist in weight boosting
+ (genomas (list));List to assist in weight boosting
  (interaction)
  (maior-peso)
  (laco 0)
  (genomenumber 0)
  (howmany)
  )
-
  (declare (type hash-table *relatorio-vizinhanca-genica*))
  (declare (type single-float percentage-cn))
  (declare (type fixnum ws))
@@ -2378,15 +2118,13 @@
  (declare (type fixnum checkpointminlimit))
  (declare (type fixnum laco))
  (declare (type fixnum genomenumber))
-
  (format t "~%Predicting ppi by conserved gene neighborhood;~%")
  (format t "[05 10 15 20 25 30 35 40 45 50 55 60 65 70 75 80 85 90 95 100]%~%")
  (format *query-io* "[")
  (force-output *query-io*)
-
- ;;O loop a seguir varre a tabela hash *pan-genoma* e para cada proteína verifica-se
- ;;if there is protein similarity between your right neighborhood and the right neighborhood
- ;;of proteins similar to it.
+;O loop a seguir varre a tabela hash *pan-genoma* e para cada proteína verifica-se
+;if there is protein similarity between your right neighborhood and the right neighborhood
+;of proteins similar to it.
  (loop for k being the hash-keys in *pan-genoma* using (hash-value v)
  do (progn
  (setf pivo-um (proteina-localidade v))
@@ -2394,8 +2132,8 @@
  (setf genomas (list))
  (setf howmany (length (proteina-similares v)))
  (if (> howmany 0)
-  (lparallel:pmap 'list #'execute-expansion-dynamic
- ;(map 'list #'execute-expansion-dynamic
+ (lparallel:pmap 'list #'execute-expansion-dynamic
+;(map 'list #'execute-expansion-dynamic
  (make-list howmany :initial-element pesos)
  (make-list howmany :initial-element genomas)
  (make-list howmany :initial-element pivo-um)
@@ -2403,17 +2141,15 @@
  (make-list howmany :initial-element ws)
  (make-list howmany :initial-element aadifflimit)
  (make-list howmany :initial-element checkpointminlimit) ))
-
  (setf (gethash k *relatorio-vizinhanca-genica*)
  (make-expansao :localidade pivo-um
  :conservacoes pesos
  );make-protein
- );;setf report-neighborhood-genic
-
- ;;Unless you have no gene stored in the expansion window,make:
- ;(unless (= (length pesos) ws)
+ );setf report-neighborhood-genic
+;Unless you have no gene stored in the expansion window,make:
+;(unless (= (length pesos) ws)
  (setf *ppi-identified-cn* t)
- ;;Creating edges between the pivot gene and the other genes in the expansion window:---------------------------------------------------------------------------------------
+;Creating edges between the pivot gene and the other genes in the expansion window:---------------------------------------------------------------------------------------
  (dotimes (i (length pesos))
  (setf (gethash (first pivo-um) ppi)
  (append (gethash (first pivo-um) ppi)
@@ -2428,8 +2164,7 @@
  );append
  );setf
  );dotimes
-
- ;;Creating edges between genes not conserved within expansion window:------------------------------------------------------------------------------------------------------
+;Creating edges between genes not conserved within expansion window:------------------------------------------------------------------------------------------------------
  (dotimes (i (1- (length pesos)))
  (unless (> (first (elt pesos i)) 1)
  (loop for j from (1+ i) to (1- (length pesos))
@@ -2447,8 +2182,7 @@
  (- (+ (second pivo-um) (+ i 1)) (length (gethash (first pivo-um) *genomas*)))
  ))
  );setf interaction
-
- ;;This if is to prevent duplication of interactions in ppi
+;This if is to prevent duplication of interactions in ppi
  (if (and (eql nil (find-if #'(lambda (x) (and
  (equalp (ppi-struct-genea interaction) (ppi-struct-genea x))
  (equalp (ppi-struct-geneb interaction) (ppi-struct-geneb x))
@@ -2457,25 +2191,23 @@
  (gethash (first pivo-um) ppi)))
  (eql nil (gethash (ppi-struct-genea interaction) *pan-genoma*))
  );and
- ;;If the interaction of the time is no longer contained in ppi,and if the pi protein is notcontained in the pangenome,make:
+;If the interaction of the time is no longer contained in ppi,and if the pi protein is notcontained in the pangenome,make:
  (setf (gethash (first pivo-um) ppi) (append (gethash (first pivo-um) ppi) (list interaction)))
  );
  );progn
  );loop
  );unless
  );dotimes
- ; );unless
+;);unless
  (dotimes (j (ceiling (- (* 60 (/ (/ (* (1+ genomenumber) 100) (hash-table-count *pan-genoma*)) 100)) laco)))
  (format *query-io* "=")
  (force-output *query-io*)
  )
  (setf laco (ceiling (+ laco (- (* 60 (/ (/ (* (1+ genomenumber) 100) (hash-table-count *pan-genoma*)) 100)) laco))))
  (incf genomenumber)
-
  );Fim do bloco de acoes para cada iteracao na tabela hash *pan-genoma*
  );Fim do loop na tabela hash *pan-genoma*
-
- ;;Normalizing the weights of the edges by the greater weight of each genome
+;Normalizing the weights of the edges by the greater weight of each genome
  (loop for k being the hash-keys in ppi using (hash-value v)
  do (progn
  (setf maior-peso (loop for i in v
@@ -2488,24 +2220,20 @@
  (format t "]~%")
  (return-from conserved-neighbourhood-dynamic ppi)
  ))
-;;;;End functions for conserved gene
+;End functions for conserved gene
 (defun relatorio-perfil-filogenetico (caminho percentage-pp ppdifftolerated pphistofilter
  ppaadifflimit ppaacheckminlimit aadifflimit
  aacheckminlimit
  )
-
  (let ((peso-grupo)(dividendo)(divisor)(total-arestas)(total-ppi-profile)
  (diferenca-perfis)(perfil-cont 0)(similar-cont 0)
  (laco 0)(genomenumber 0))
-
  (ensure-directories-exist caminho)
  (with-open-file (str caminho
  :direction :output
  :if-exists :supersede
  :if-does-not-exist :create)
-
  (format str "~%")
-
  (if (= ppdifftolerated 0)
  (progn
  (format str "---------------------Report of complete ppi prediction by phylogenetic profile---------------------~%")
@@ -2537,33 +2265,28 @@
  ((and (= aadifflimit 1) (= aacheckminlimit 25)) (format str "Minimum identity percentage: 92,55%~%"))
  ));if pphistofilter
  (format str "---------------------------------------------------------------------------------------------------~%")
-
  (format t "~%Writing phylogenetic profiles report;~%")
  (format t "[05 10 15 20 25 30 35 40 45 50 55 60 65 70 75 80 85 90 95 100]%~%")
  (format *query-io* "[")
  (force-output *query-io*)
-
  (loop for k being the hash-keys in *agrupamento-por-perfis-filos-identicos* using (hash-value grupos)
  do (progn
  (setf total-arestas (loop for i in grupos
  summing (/ (* (length (second i)) (- (length (second i)) 1)) 2) into total
  finally (return total)))
-
  (format str "~%Genome: ~a ~%Total profiles: ~a ~%Total ppi: ~a~%" k (length grupos) total-arestas)
  (format str "---------------------------------------------------------------------------------------------------~%")
  (dolist (g grupos)
-
- ;;Incrementing or profile counter
+;Incrementing or profile counter
  (setf perfil-cont (incf perfil-cont))
- ;;Picking up the group index of size equal to group g in the group weights list.
+;Picking up the group index of size equal to group g in the group weights list.
  (setf dividendo (1+ (position-if #'(lambda (x) (= (third g) (third x))) (gethash k *pesos-grupos*))))
- ;;Picking up the index of the most populous group, that is, the last group.
+;Picking up the index of the most populous group, that is, the last group.
  (setf divisor (length (gethash k *pesos-grupos*)))
- ;;Calculating the weight of group g based on their position, and the position of the last group (most populous).
+;Calculating the weight of group g based on their position, and the position of the last group (most populous).
  (setf peso-grupo (* (/ dividendo divisor) percentage-pp))
- ;;Calculating the total edges created for profile g
+;Calculating the total edges created for profile g
  (setf total-ppi-profile (/ (* (length (second g)) (- (length (second g)) 1)) 2))
-
  (format str "Profile ~6a => Total genes: ~7a| Total ppi: ~9a| Weight: ~,3f | Number of genomes: ~a;~%"
  perfil-cont
  (length (second g))
@@ -2573,19 +2296,16 @@
  ));dotimes groups
  (setf perfil-cont 0)
  (format str "---------------------------------------------------------------------------------------------------~%")
-
  (dotimes (j (ceiling (- (* 60 (/ (/ (* (1+ genomenumber) 100) (hash-table-count *agrupamento-por-perfis-filos-identicos*)) 100)) laco)))
  (format *query-io* "=")
  (force-output *query-io*)
  )
  (setf laco (ceiling (+ laco (- (* 60 (/ (/ (* (1+ genomenumber) 100) (hash-table-count *agrupamento-por-perfis-filos-identicos*)) 100)) laco))))
  (incf genomenumber)
-
  );progn
- ); loop hash table *agrupamento-por-perfis-filos-identicos*
+ );loop hash table *agrupamento-por-perfis-filos-identicos*
  (format t "]~%")
  );progn
-
  (progn
  (format str "-----------------------Report of complete ppi prediction by phylogenetic profile-----------------------~%")
  (if (string= pphistofilter "Y")
@@ -2616,43 +2336,38 @@
  ((and (= aadifflimit 1) (= aacheckminlimit 25)) (format str "Minimum identity percentage: 92,55%~%"))
  ));if pphistofilter
  (format str "-------------------------------------------------------------------------------------------------------~%")
-
  (format t "~%Writing phylogenetic profiles report;~%")
  (format t "[05 10 15 20 25 30 35 40 45 50 55 60 65 70 75 80 85 90 95 100]%~%")
  (format *query-io* "[")
  (force-output *query-io*)
-
  (loop for k being the hash-keys in *agrupamento-por-perfis-filos-semelhantes* using (hash-value grupos)
  do (progn
  (setf total-arestas (loop for g in grupos
  summing (+
- ;;Calculating how many pairs of genes with identical profiles will be generated.
+;Calculating how many pairs of genes with identical profiles will be generated.
  (/ (* (length (second (first g))) (- (length (second (first g))) 1)) 2)
- ;;Multiplying the number of genes of identical profiles by the number of genes of similar profiles.
+;Multiplying the number of genes of identical profiles by the number of genes of similar profiles.
  (* (length (second (first g)))
- ;;Summing up the amount of genes from similar profiles.
+;Summing up the amount of genes from similar profiles.
  (loop for gs in (second g) summing (length (second gs)) into total finally (return total))
  );*
  );+
  into total
  finally (return total))
  );setf full-edges
-
  (format str "~%Genome: ~a ~%Total profiles: ~a ~%Total ppi: ~a~%" k (length grupos) total-arestas)
  (format str "-------------------------------------------------------------------------------------------------------~%")
  (dolist (g grupos)
-
- ;;Incrementing or profile counter
+;Incrementing or profile counter
  (setf perfil-cont (incf perfil-cont))
- ;;Picking up the group index of size equal to group g in the group weights list.
+;Picking up the group index of size equal to group g in the group weights list.
  (setf dividendo (1+ (position-if #'(lambda (x) (= (third (first g)) (third (first x)))) (gethash k *pesos-grupos*))))
- ;;Picking up the index of the most populous group, that is, the last group.
+;Picking up the index of the most populous group, that is, the last group.
  (setf divisor (length (gethash k *pesos-grupos*)))
- ;;Calculating the weight of group g based on their position, and the position of the last group (most populous).
+;Calculating the weight of group g based on their position, and the position of the last group (most populous).
  (setf peso-grupo (* (/ dividendo divisor) percentage-pp))
- ;;Calculating the total edges created for profile g
+;Calculating the total edges created for profile g
  (setf total-ppi-profile (/ (* (length (second (first g))) (- (length (second (first g))) 1)) 2))
-
  (format str "Profile ~9a => Total genes: ~7a| Total ppi: ~9a| Weight: ~,3f | Number of genomes: ~a;~%"
  perfil-cont
  (length (second (first g)))
@@ -2660,19 +2375,18 @@
  (if (= total-ppi-profile 0) (- 0 0) (- peso-grupo 0))
  (length(first (first g)))
  );format
-
  (dolist (sg (second g))
- ;;Incrementing or profile counter
+;Incrementing or profile counter
  (setf similar-cont (incf similar-cont))
- ;;Calculating the difference between profiles.
+;Calculating the difference between profiles.
  (setf diferenca-perfis (comparar-perfis (first (first g)) (first sg)))
  (format str "Similar ~9a => Total genes: ~7a| Total ppi: ~9a| Weight: ~,3f | Number of genomes: ~a;~%"
- ;profile-cont
+;profile-cont
  (concatenate 'string (write-to-string perfil-cont) "." (write-to-string similar-cont))
- ;similar-cont
+;similar-cont
  (length (second sg))
- ;;Multiplying the number of g-profile genes by the total number of genes in the sg profile (profile i similar to g)
- ;;It is necessário to do this multiplication, because each gene of profile g interacts with each gene of the similar profile sg
+;Multiplying the number of g-profile genes by the total number of genes in the sg profile (profile i similar to g)
+;It is necessário to do this multiplication, because each gene of profile g interacts with each gene of the similar profile sg
  (* (length (second (first g))) (length (second sg)))
  (- peso-grupo (* peso-grupo (/ (/ (* diferenca-perfis 100) (length *genomes-files*)) 100)))
  (length (first sg))
@@ -2682,16 +2396,14 @@
  );dotimes groups
  (setf perfil-cont 0)
  (format str "------------------------------------------------------------------------------------------------------~%")
-
  (dotimes (j (ceiling (- (* 60 (/ (/ (* (1+ genomenumber) 100) (hash-table-count *agrupamento-por-perfis-filos-semelhantes*)) 100)) laco)))
  (format *query-io* "=")
  (force-output *query-io*)
  )
  (setf laco (ceiling (+ laco (- (* 60 (/ (/ (* (1+ genomenumber) 100) (hash-table-count *agrupamento-por-perfis-filos-semelhantes*)) 100)) laco))))
  (incf genomenumber)
-
  );progn
- ); loop hash table *agrupamento-por-perfis-filos-semelhantes*
+ );loop hash table *agrupamento-por-perfis-filos-semelhantes*
  (format t "]~%")
  );progn
  );if
@@ -2699,8 +2411,7 @@
  );with-open-file
  );let
  );defun
-
-;;Function to create a pangenome report
+;Function to create a pangenome report
 (declaim (ftype (function ( string fixnum fixnum) ) relatorio-pangenoma-1))
 (defun relatorio-pangenoma-1(caminho aadifflimit aacheckminlimit)
  (let ((protein)(laco 0)(genomenumber 0))
@@ -2709,9 +2420,7 @@
  :direction :output
  :if-exists :supersede
  :if-does-not-exist :create)
-
  (format str "~%")
-
  (format str "-----------------------------------Pan genoma------------------------------------~%")
  (cond
  ((and (= aadifflimit 0) (= aacheckminlimit 26)) (format str "Minimum identity percentage: 100%~%"))
@@ -2727,12 +2436,10 @@
  ((and (= aadifflimit 1) (= aacheckminlimit 25)) (format str "Minimum identity percentage: 92,55%~%"))
  )
  (format str "---------------------------------------------------------------------------------")
-
  (format t "~%Writing pan-genome format 1;~%")
  (format t "[05 10 15 20 25 30 35 40 45 50 55 60 65 70 75 80 85 90 95 100]%~%")
  (format *query-io* "[")
  (force-output *query-io*)
-
  (loop for k being the hash-keys in *pan-genoma* using (hash-value v)
  do (progn
  (format str "~%~%Protein: ~a | Genome: ~a~%" k (first (proteina-localidade v)))
@@ -2747,21 +2454,18 @@
  ))
  )
  (format str "---------------------------------------------------------------------------------")
-
  (dotimes (j (ceiling (- (* 60 (/ (/ (* (1+ genomenumber) 100) (hash-table-count *pan-genoma*)) 100)) laco)))
  (format *query-io* "=")
  (force-output *query-io*)
  )
  (setf laco (ceiling (+ laco (- (* 60 (/ (/ (* (1+ genomenumber) 100) (hash-table-count *pan-genoma*)) 100)) laco))))
  (incf genomenumber)
-
  );progn
  );loop hash table
  (format t "]~%")
  (format str "~%")
  );with-open-file
  ));----------------------------------------------------------------------------
-
 (declaim (ftype (function ( string ) ) relatorio-pangenoma-2))
 (defun relatorio-pangenoma-2 (caminho)
  (let ((similar)(laco 0)(genomenumber 0))
@@ -2770,12 +2474,10 @@
  :direction :output
  :if-exists :supersede
  :if-does-not-exist :create)
-
  (format t "~%Writing pan-genome format 2;~%")
  (format t "[05 10 15 20 25 30 35 40 45 50 55 60 65 70 75 80 85 90 95 100]%~%")
  (format *query-io* "[")
  (force-output *query-io*)
-
  (format str "#Columns per row: Genome, Gene, Similar list~%~%")
  (loop for k being the hash-keys in *pan-genoma* using (hash-value v)
  do (progn
@@ -2783,41 +2485,33 @@
  (dolist (i (proteina-similares v))
  (if (and i (first i) (second i))
  (progn
-
  (setf similar (first (elt (gethash (first i) *genomas*)(second i))))
  (format str " ~a" similar ))
  ))
  (format str ";~%")
-
  (dotimes (j (ceiling (- (* 60 (/ (/ (* (1+ genomenumber) 100) (hash-table-count *pan-genoma*)) 100)) laco)))
  (format *query-io* "=")
  (force-output *query-io*)
  )
  (setf laco (ceiling (+ laco (- (* 60 (/ (/ (* (1+ genomenumber) 100) (hash-table-count *pan-genoma*)) 100)) laco))))
  (incf genomenumber)
-
  );progn
  );loop hash table
  (format t "]~%")
  (format str "~%")
  );with-open-file
  ))
- ;-------------------------------------------------------------------------------
-
-;;Function to create a report that shows the amount of genes stored and
-;;not kept in the vicinity of pangenome genes
+;-------------------------------------------------------------------------------
+;Function to create a report that shows the amount of genes stored and
+;not kept in the vicinity of pangenome genes
 (defun relatorio-conservao-genica(caminho aadifflimit aacheckminlimit expansion-type w1 window-size)
-
  (let ((laco 0)(genomenumber 0))
-
  (ensure-directories-exist caminho)
  (with-open-file (str caminho
  :direction :output
  :if-exists :supersede
  :if-does-not-exist :create)
-
  (format str "~%")
-
  (format str "#-----------------------------------------------Gene neighborhood conservation report----------------------------------------------~%")
  (format str "~%")
  (cond
@@ -2839,12 +2533,10 @@
  )
  (format str "~%")
  (format str "#----------------------------------------------------------------------------------------------------------------------------------~%~%")
-
  (format t "~%Writing Gene neighborhood conservation report;~%")
  (format t "[05 10 15 20 25 30 35 40 45 50 55 60 65 70 75 80 85 90 95 100]%~%")
  (format *query-io* "[")
  (force-output *query-io*)
-
  (format str "#Columns per row: Genome, Gene, Number of genes conserved, Number of genes not conserved, Number of genomes of each conserved gene;~%~%")
  (loop for k being the hash-keys in *relatorio-vizinhanca-genica* using (hash-value v)
  do (progn
@@ -2862,14 +2554,12 @@
  (format str " 0")
  )
  (format str ";~%")
-
  (dotimes (j (ceiling (- (* 60 (/ (/ (* (1+ genomenumber) 100) (hash-table-count *relatorio-vizinhanca-genica*)) 100)) laco)))
  (format *query-io* "=")
  (force-output *query-io*)
  )
  (setf laco (ceiling (+ laco (- (* 60 (/ (/ (* (1+ genomenumber) 100) (hash-table-count *relatorio-vizinhanca-genica*)) 100)) laco))))
  (incf genomenumber)
-
  );progn
  );loop hash table
  (format t "]~%")
@@ -2877,18 +2567,15 @@
  );with-open-file
  );let
  );----------------------------------------------------------------------------
-
-;;Function to create the report of the amount of interactions per feature in each genome.
+;Function to create the report of the amount of interactions per feature in each genome.
 (defun ppi-number-report (ppi-conserved-neighbourhood ppi-phylogenetic-profiles ppi-gene-fusion
  caminho gene-fusion ppcn ppcomplete pplimit
  pptrim ppthreshold ppdeletegroup ppdeleteprofile)
-
  (let ((laco 0)
  (genomenumber 0)
  )
  (declare (type fixnum laco))
  (declare (type fixnum genomenumber))
-
  (if (= (length *genomes-files*) 1)
  (setf ppcn "N"
  ppcomplete "N"
@@ -2898,140 +2585,112 @@
  ppdeletegroup "N"
  ppdeleteprofile "N"
  ))
-
  (ensure-directories-exist caminho)
  (with-open-file (str caminho
  :direction :output
  :if-exists :supersede
  :if-does-not-exist :create)
-
  (format str "~%")
-
  (format str "---------------------Amount of predicted interactions---------------------~%~%")
  (format str "--------------------------------------------------------------------------~%")
-
  (cond
  ((and (or (string= ppcn "Y") (string= ppcomplete "Y") (string= pplimit "Y") (string= pptrim "Y")
  (string= ppthreshold "Y") (string= ppdeletegroup "Y") (string= ppdeleteprofile "Y"))
  (string= gene-fusion "N"))
-
  (format t "~%Writing ppi report;~%")
  (format t "[05 10 15 20 25 30 35 40 45 50 55 60 65 70 75 80 85 90 95 100]%~%")
  (format *query-io* "[")
  (force-output *query-io*)
-
  (dolist (g *genomes-files*)
-
  (format str "Genome name: ~22t~a~%" g)
  (format str "Number of ppi by cn: ~22t~a~%" (length (gethash g ppi-conserved-neighbourhood)))
  (format str "Number of ppi by pp: ~22t~a~%" (length (gethash g ppi-phylogenetic-profiles)))
  (format str "--------------------------------------------------------------------------~%")
-
  (dotimes (j (ceiling (- (* 60 (/ (/ (* (1+ genomenumber) 100) (length *genomes-files*)) 100)) laco)))
  (format *query-io* "=")
  (force-output *query-io*)
  )
  (setf laco (ceiling (+ laco (- (* 60 (/ (/ (* (1+ genomenumber) 100) (length *genomes-files*)) 100)) laco))))
  (incf genomenumber)
-
  );dolist
  (format t "]~%")
  )
  ((and (or (string= ppcn "Y") (string= ppcomplete "Y") (string= pplimit "Y") (string= pptrim "Y")
  (string= ppthreshold "Y") (string= ppdeletegroup "Y") (string= ppdeleteprofile "Y"))
  (string= gene-fusion "Y"))
-
  (format t "~%Writing ppi report;~%")
  (format t "[05 10 15 20 25 30 35 40 45 50 55 60 65 70 75 80 85 90 95 100]%~%")
  (format *query-io* "[")
  (force-output *query-io*)
-
  (dolist (g *genomes-files*)
-
  (format str "Genome name: ~22t~a~%" g)
  (format str "Number of ppi by cn: ~22t~a~%" (length (gethash g ppi-conserved-neighbourhood)))
  (format str "Number of ppi by pp: ~22t~a~%" (length (gethash g ppi-phylogenetic-profiles)))
  (format str "Number of ppi by gf: ~22t~a~%" (length (gethash g ppi-gene-fusion)))
  (format str "--------------------------------------------------------------------------~%")
-
  (dotimes (j (ceiling (- (* 60 (/ (/ (* (1+ genomenumber) 100) (length *genomes-files*)) 100)) laco)))
  (format *query-io* "=")
  (force-output *query-io*)
  )
  (setf laco (ceiling (+ laco (- (* 60 (/ (/ (* (1+ genomenumber) 100) (length *genomes-files*)) 100)) laco))))
  (incf genomenumber)
-
  );dolist
  (format t "]~%")
  )
  ((and (and (string= ppcn "N") (string= ppcomplete "N") (string= pplimit "N") (string= pptrim "N")
  (string= ppthreshold "N") (string= ppdeletegroup "N") (string= ppdeleteprofile "N"))
  (string= gene-fusion "Y"))
-
  (format t "~%Writing ppi report;~%")
  (format t "[05 10 15 20 25 30 35 40 45 50 55 60 65 70 75 80 85 90 95 100]%~%")
  (format *query-io* "[")
  (force-output *query-io*)
-
  (dolist (g *genomes-files*)
-
  (format str "Genome name: ~22t~a~%" g)
  (format str "Number of ppi by cn: ~22t~a~%" (length (gethash g ppi-conserved-neighbourhood)))
  (format str "Number of ppi by gf: ~22t~a~%" (length (gethash g ppi-gene-fusion)))
  (format str "--------------------------------------------------------------------------~%")
-
  (dotimes (j (ceiling (- (* 60 (/ (/ (* (1+ genomenumber) 100) (length *genomes-files*)) 100)) laco)))
  (format *query-io* "=")
  (force-output *query-io*)
  )
  (setf laco (ceiling (+ laco (- (* 60 (/ (/ (* (1+ genomenumber) 100) (length *genomes-files*)) 100)) laco))))
  (incf genomenumber)
-
  );dolist
  (format t "]~%")
  )
  ((and (and (string= ppcn "N") (string= ppcomplete "N") (string= pplimit "N") (string= pptrim "N")
  (string= ppthreshold "N") (string= ppdeletegroup "N") (string= ppdeleteprofile "N"))
  (string= gene-fusion "N"))
-
  (format t "~%Writing ppi report;~%")
  (format t "[05 10 15 20 25 30 35 40 45 50 55 60 65 70 75 80 85 90 95 100]%~%")
  (format *query-io* "[")
  (force-output *query-io*)
-
  (dolist (g *genomes-files*)
-
  (format str "Genome name: ~22t~a~%" g)
  (format str "Number of ppi by cn: ~22t~a~%" (length (gethash g ppi-conserved-neighbourhood)))
  (format str "--------------------------------------------------------------------------~%")
-
  (dotimes (j (ceiling (- (* 60 (/ (/ (* (1+ genomenumber) 100) (length *genomes-files*)) 100)) laco)))
  (format *query-io* "=")
  (force-output *query-io*)
  )
  (setf laco (ceiling (+ laco (- (* 60 (/ (/ (* (1+ genomenumber) 100) (length *genomes-files*)) 100)) laco))))
  (incf genomenumber)
-
  );dolist
  (format t "]~%")
  ));cond
  );with-open-file
  );let
  );defun
- ;-------------------------------------------------------------------------------
-
+;-------------------------------------------------------------------------------
 (declaim (ftype (function ( string fixnum fixnum) ) gene-fusion-report))
 (defun gene-fusion-report (caminho aadifflimit aacheckminlimit)
-
  (let ((laco 0)(genomenumber 0))
  (ensure-directories-exist caminho)
  (with-open-file (str caminho
  :direction :output
  :if-exists :supersede
  :if-does-not-exist :create)
-
  (format str "~%")
-
  (format str "--------------------------------------Gene fusion report---------------------------------------~%")
  (cond
  ((and (= aadifflimit 0) (= aacheckminlimit 26)) (format str "Minimum identity percentage: 100%~%"))
@@ -3047,12 +2706,10 @@
  ((and (= aadifflimit 1) (= aacheckminlimit 25)) (format str "Minimum identity percentage: 92,55%~%"))
  )
  (format str "-----------------------------------------------------------------------------------------------")
-
  (format t "~%Writing gene fusion report;~%")
  (format t "[05 10 15 20 25 30 35 40 45 50 55 60 65 70 75 80 85 90 95 100]%~%")
  (format *query-io* "[")
  (force-output *query-io*)
-
  (loop for g being the hash-keys in *fusoes* using (hash-value fusoes)
  do (progn
  (format str "~%~%Genome: ~15t~a~%~%" g)
@@ -3070,14 +2727,12 @@
  (format str "~%")
  )
  (format str "-----------------------------------------------------------------------------------------------")
-
  (dotimes (j (ceiling (- (* 60 (/ (/ (* (1+ genomenumber) 100) (hash-table-count *fusoes*)) 100)) laco)))
  (format *query-io* "=")
  (force-output *query-io*)
  )
  (setf laco (ceiling (+ laco (- (* 60 (/ (/ (* (1+ genomenumber) 100) (hash-table-count *fusoes*)) 100)) laco))))
  (incf genomenumber)
-
  );progn
  );loop hash table
  (format t "]~%")
@@ -3085,9 +2740,8 @@
  );with-open-file
  );let
  )
- ;-------------------------------------------------------------------------------
-
-;;Function that merges the ppis networks of each feature generating a single ppi
+;-------------------------------------------------------------------------------
+;Function that merges the ppis networks of each feature generating a single ppi
 (defun genppi (
  workingdir
  gene-fusion
@@ -3124,7 +2778,6 @@
  aadifflimit
  aacheckminlimit
  );parameters
-
  (defparameter *genome-ppi* (make-hash-table :test #'equalp)
  "Tabela hash para armazenar a ppi de cada genoma")
  (let ((ppi-phylogenetic-profiles (make-hash-table :test #'equalp))
@@ -3139,8 +2792,7 @@
  (laco 0)
  (genomenumber 0)
  )
-
- ;;Loading the files and generating the pangenome
+;Loading the files and generating the pangenome
  (histo-genomas (list-directory workingdir))
  (setf lparallel:*kernel* (lparallel:make-kernel (if (> (- (workers) 2) 0 ) (- (workers) 2) 1)))
  (if (string= pphistofilter "N")
@@ -3149,11 +2801,9 @@
  (pan-genoma-2 aadifflimit aacheckminlimit ppaadifflimit ppaacheckminlimit)
  (pan-genoma-1 aadifflimit aacheckminlimit)
  ))
-
  (unless (> (hash-table-count *pan-genoma*) 0)
  (format t "~%No protein in the pan-genome~%")
  )
-
  (if (or
  (and (= (hash-table-count *genomas*) 1)
  (string= gene-fusion "N")
@@ -3166,8 +2816,7 @@
  );or
  (setf percentage-cn (- 1.0 0))
  )
-
- ;;Generating ppi per conserved gene
+;Generating ppi per conserved gene
  (unless (= (hash-table-count *pan-genoma*) 0)
  (setf ppi-conserved-neighbourhood
  (if (string= expansion-type "fixed")
@@ -3176,18 +2825,15 @@
  );if
  );setf
  );unless
-
  (cond
- ;;Start of Condition and Action 1
+;Start of Condition and Action 1
  ((and (string= ppcn "Y") (> (hash-table-count *genomas*) 1))
- ;;Generating ppi by phylogenetic profile for interactions predicted by conserved gene neighborhood.
-
+;Generating ppi by phylogenetic profile for interactions predicted by conserved gene neighborhood.
  (format t "~%Predicting ppi by phylogenetic profiles;~%")
  (format t "[05 10 15 20 25 30 35 40 45 50 55 60 65 70 75 80 85 90 95 100]%~%")
  (format *query-io* "[")
  (force-output *query-io*)
-
- ;;Generating ppi by phylogenetic profile for interactions predicted by conserved gene neighborhood.
+;Generating ppi by phylogenetic profile for interactions predicted by conserved gene neighborhood.
  (dolist (g *genomes-files*)
  (unless (eql nil (gethash g ppi-conserved-neighbourhood))
  (progn
@@ -3210,19 +2856,19 @@
  (list 'Weight '= percentage-pp) (third perfil-filo-A)) lista-ppi-pp)
  );progn
  )
- ;Mesclando ppi:
- ;(setf (third (second i)) (+ (third (second i)) (* percentage-pp 1.0)))
+;Mesclando ppi:
+;(setf (third (second i)) (+ (third (second i)) (* percentage-pp 1.0)))
  );if
  );unless
  );dolist
- ;;recording ppi by phylogenetic profile in the ppi hash table -phylogenetic-profiles.
+;recording ppi by phylogenetic profile in the ppi hash table -phylogenetic-profiles.
  (if (> (length lista-ppi-pp) 0)
-     (progn
-       (setf lista-ppi-pp (deduplicate-ppi-list lista-ppi-pp)
-             *ppi-identified-pp* t)
-       ))
+ (progn
+ (setf lista-ppi-pp (deduplicate-ppi-list lista-ppi-pp)
+ *ppi-identified-pp* t)
+ ))
  (setf (gethash g ppi-phylogenetic-profiles) lista-ppi-pp)
- ;;If any ppi has been predicted, the identifier from ppi to true is changed.
+;If any ppi has been predicted, the identifier from ppi to true is changed.
  (setf lista-ppi-pp nil)
  );unlles
  );progn
@@ -3236,61 +2882,51 @@
  );dolist genomas-files
  (format t "]~%")
  );End of Condition and Action 1
-
- ;;Beginning of Condition and Action 2
+;Beginning of Condition and Action 2
  ((and (string= ppcomplete "Y") (> (hash-table-count *genomas*) 1))
  (setf ppi-phylogenetic-profiles (phylogenetic-profiles-complete percentage-pp ppdifftolerated))
  );End Condition and Action 2
-
- ;;Start of Condition and Action 3
+;Start of Condition and Action 3
  ((and (string= pplimit "Y") (> (hash-table-count *genomas*) 1))
  (setf ppi-phylogenetic-profiles (phylogenetic-profiles-ppiterlimit percentage-pp ppdifftolerated ppiterlimit))
  );End Condition and Action 3
-
- ;;Start of Condition and Action 4
+;Start of Condition and Action 4
  ((and (string= pptrim "Y") (> (hash-table-count *genomas*) 1))
  (setf ppi-phylogenetic-profiles (phylogenetic-profiles-trim percentage-pp ppdifftolerated trim))
  );End Condition and Action 4
-
- ;Beginning of Condition and Action 5
+;Beginning of Condition and Action 5
  ((and (string= ppthreshold "Y") (> (hash-table-count *genomas*) 1))
  (setf ppi-phylogenetic-profiles (phylogenetic-profiles-threshold percentage-pp ppdifftolerated threshold plusminus))
  );End Condition and Action 5
-
- ;;Beginning of Condition and Action 6
+;Beginning of Condition and Action 6
  ((and (string= ppdeletegroup "Y") (> (hash-table-count *genomas*) 1))
  (setf ppi-phylogenetic-profiles (phylogenetic-profiles-delete-clusters percentage-pp grouplimit))
  );End Condition and Action 6
-
- ;;Beginning of Condition and Action 7
+;Beginning of Condition and Action 7
  ((and (string= ppdeleteprofile "Y") (> (hash-table-count *genomas*) 1))
  (setf ppi-phylogenetic-profiles (phylogenetic-profiles-delete-perfil percentage-pp ppdifftolerated profiles))
  );End Condition and Action 7
  );cond
  (lparallel:end-kernel)
- ;;If the user has chosen to run gene fusion
+;If the user has chosen to run gene fusion
  (if (string= gene-fusion "Y")
  (setf ppi-gene-fusion (rosetta-stone aadifflimit aacheckminlimit percentage-gf))
  )
-
- ;If ppi was found for one of the features
+;If ppi was found for one of the features
  (if (or *ppi-identified-cn* *ppi-identified-pp* *ppi-identified-gf*)
  (progn
-
  (if (> (hash-table-count *pan-genoma*) 0)
  (progn
- ;;Pangenome Report
+;Pangenome Report
  (setf caminho (concatenate 'string workingdir "/pan-genome/" "pan-genome-format-1.txt"))
  (relatorio-pangenoma-1 caminho aadifflimit aacheckminlimit)
  (setf caminho (concatenate 'string workingdir "/pan-genome/" "pan-genome-format-2.txt"))
  (relatorio-pangenoma-2 caminho)
-
- ;;Preserved gene neighborhood report
+;Preserved gene neighborhood report
  (setf caminho (concatenate 'string workingdir "/gene-neighborhood-conservation-report/" "report.txt"))
  (relatorio-conservao-genica caminho aadifflimit aacheckminlimit expansion-type w1 window-size)
  ))
-
- ;;Relatório de phylogenetic profiles
+;Relatório de phylogenetic profiles
  (if (and (> (length *genomes-files*) 1)
  (string= ppcomplete "Y")
  )
@@ -3300,33 +2936,27 @@
  ppaadifflimit ppaacheckminlimit aadifflimit aacheckminlimit)
  );progn
  );if pp report
-
- ;;Report on gene mergers
+;Report on gene mergers
  (if *ppi-identified-gf*
  (progn
  (setf caminho (concatenate 'string workingdir "/gene-fusion-report/report.txt"))
  (gene-fusion-report caminho aadifflimit aacheckminlimit)
  ))
-
- ;;ppi report
- ;;Printing reports of the amounts of interactions per feature.
+;ppi report
+;Printing reports of the amounts of interactions per feature.
  (setf caminho (concatenate 'string workingdir "/ppi-report/report.txt"))
  (ppi-number-report ppi-conserved-neighbourhood ppi-phylogenetic-profiles ppi-gene-fusion
  caminho gene-fusion ppcn ppcomplete pplimit
  pptrim ppthreshold ppdeletegroup ppdeleteprofile)
-
-
- ;;Reconfiguring progress bar variables in case the option -ppcn is chosen.
+;Reconfiguring progress bar variables in case the option -ppcn is chosen.
  (setf genomenumber 0)
  (setf laco 0)
-
  (format t "~%Writing ppi files;~%")
  (format t "[05 10 15 20 25 30 35 40 45 50 55 60 65 70 75 80 85 90 95 100]%~%")
  (format *query-io* "[")
  (force-output *query-io*)
- ;;This dolist generates the ppi-end of each genome
+;This dolist generates the ppi-end of each genome
  (dolist (g *genomes-files*)
-
  (if *ppi-identified-cn*
  (setf ppi-final (append ppi-final (gethash g ppi-conserved-neighbourhood)))
  )
@@ -3336,14 +2966,11 @@
  (if *ppi-identified-gf*
  (setf ppi-final (append ppi-final (gethash g ppi-gene-fusion)))
  )
-
- ;;This line was necessary to resolve a problem arising from the following ordering.
+;This line was necessary to resolve a problem arising from the following ordering.
  (setf ppi-final (append ppi-final (list)))
-
- ;;Ordering the final ppi of the genome g
+;Ordering the final ppi of the genome g
  (setf ppi-final (sort ppi-final #'< :key #'(lambda (x) (ppi-struct-position x))))
-
- ;;Formatting the weight value of the final ppi of the genome g
+;Formatting the weight value of the final ppi of the genome g
  (dolist (i ppi-final)
  (setf (ppi-struct-weight i)
  (with-input-from-string
@@ -3351,21 +2978,18 @@
  (read in))
  );setf
  );dolist
-
- ;;Recording ppi.dot file for genome g
+;Recording ppi.dot file for genome g
  (setf caminho (concatenate 'string workingdir "/ppi-files/" g ".dot"))
  (ensure-directories-exist caminho)
  (with-open-file (str caminho
  :direction :output
  :if-exists :supersede
  :if-does-not-exist :create)
-
  (format str (concatenate 'string "graph " g " {~%"))
-
  (dolist (i ppi-final)
  (format str "~S -- ~S [WEIGHT = ~S];~%"
- ;(ppi-struct-genea i)
- ;(ppi-struct-geneb i)
+;(ppi-struct-genea i)
+;(ppi-struct-geneb i)
  (ppi-struct-genea i)
  (ppi-struct-geneb i)
  (ppi-struct-weight i)
@@ -3373,28 +2997,24 @@
  );dolist
  (format str "}~%")
  );with-open-file
-
- ;;Reconfiguring the ppi-finalvariable for the next genome g
+;Reconfiguring the ppi-finalvariable for the next genome g
  (setf ppi-final (list))
-
- ;;Start of generation of PPI files . SIF
- ;;Recording ppi.sif file for genome g
+;Start of generation of PPI files . SIF
+;Recording ppi.sif file for genome g
  (setf caminho (concatenate 'string workingdir "/ppi-files/" g ".sif"))
  (ensure-directories-exist caminho)
  (with-open-file (str caminho
  :direction :output
  :if-exists :supersede
  :if-does-not-exist :create)
-
  (if *ppi-identified-cn*
  (progn
- ;;Ordering the ppis of the genome g
+;Ordering the ppis of the genome g
  (setf (gethash g ppi-conserved-neighbourhood) (sort (gethash g ppi-conserved-neighbourhood) #'< :key #'(lambda (x) (ppi-struct-position x))))
-
  (dolist (i (gethash g ppi-conserved-neighbourhood))
  (format str "~S~Ccn~C~S~%"
- ;(ppi-struct-genea i)
- ;(ppi-struct-geneb i)
+;(ppi-struct-genea i)
+;(ppi-struct-geneb i)
  (ppi-struct-genea i)
  #\tab
  #\tab
@@ -3403,16 +3023,14 @@
  );dolist
  );progn
  );if
-
  (if *ppi-identified-pp*
  (progn
- ;;Ordering the ppis of the genome g
+;Ordering the ppis of the genome g
  (setf (gethash g ppi-phylogenetic-profiles) (sort (gethash g ppi-phylogenetic-profiles) #'< :key #'(lambda (x) (ppi-struct-position x))))
-
  (dolist (i (gethash g ppi-phylogenetic-profiles))
  (format str "~S~Cpp~C~S~%"
- ;(ppi-struct-genea i)
- ;(ppi-struct-geneb i)
+;(ppi-struct-genea i)
+;(ppi-struct-geneb i)
  (ppi-struct-genea i)
  #\tab
  #\tab
@@ -3421,16 +3039,14 @@
  );dolist
  );progn
  );if
-
  (if *ppi-identified-gf*
  (progn
- ;;Ordering the ppis of the genome g
+;Ordering the ppis of the genome g
  (setf (gethash g ppi-gene-fusion) (sort (gethash g ppi-gene-fusion) #'< :key #'(lambda (x) (ppi-struct-position x))))
-
  (dolist (i (gethash g ppi-gene-fusion))
  (format str "~S~Cgf~C~S~%"
- ;(ppi-struct-genea i)
- ;(ppi-struct-geneb i)
+;(ppi-struct-genea i)
+;(ppi-struct-geneb i)
  (ppi-struct-genea i)
  #\tab
  #\tab
@@ -3440,21 +3056,17 @@
  );progn
  );if
  );with-open-file
- ;;End of generation of PPI files . SIF
-
+;End of generation of PPI files . SIF
  (dotimes (j (ceiling (- (* 60 (/ (/ (* (1+ genomenumber) 100) (length *genomes-files*)) 100)) laco)))
  (format *query-io* "=")
  (force-output *query-io*)
  )
  (setf laco (ceiling (+ laco (- (* 60 (/ (/ (* (1+ genomenumber) 100) (length *genomes-files*)) 100)) laco))))
  (incf genomenumber)
-
  );dolist
  (format t "]~%")
-
  (format t "~%~%PPi prediction completed successfully.~%")
-
- ;;Displaying the path of the pangenome archives and conserved gene neighborhood.
+;Displaying the path of the pangenome archives and conserved gene neighborhood.
  (if (> (hash-table-count *pan-genoma*) 0)
  (progn
  (if (char= #\/ (elt workingdir (1- (length workingdir))))
@@ -3468,8 +3080,7 @@
  ));if char=
  );progn
  );if hash-table.
-
- ;;Exhibiting the path of the phylogenetic profile report.
+;Exhibiting the path of the phylogenetic profile report.
  (if (and (> (length *genomes-files*) 1)
  (string= ppcomplete "Y")
  )
@@ -3479,8 +3090,7 @@
  (format t (concatenate 'string "~%Phylogenetic-profiles-report path: "
  (concatenate 'string workingdir "/phylogenetic-profiles-report/report.txt")))
  ))
-
- ;;Displaying the path of the gene fusion report.
+;Displaying the path of the gene fusion report.
  (if *ppi-identified-gf*
  (if (char= #\/ (elt workingdir (1- (length workingdir))))
  (format t (concatenate 'string "~%Gene-fusion-report path: "
@@ -3488,23 +3098,19 @@
  (format t (concatenate 'string "~%Gene-fusion-report path: "
  (concatenate 'string workingdir "/gene-fusion-report/report.txt")))
  ))
-
- ;;Displaying the path of the . ppi dot
+;Displaying the path of the . ppi dot
  (if (char= #\/ (elt workingdir (1- (length workingdir))))
  (format t (concatenate 'string "~%PPi-files path: " (concatenate 'string workingdir "ppi-files")))
  (format t (concatenate 'string "~%PPi-files path: " (concatenate 'string workingdir "/ppi-files")))
  )
-
- ;;Viewing ppi report paths
+;Viewing ppi report paths
  (if (char= #\/ (elt workingdir (1- (length workingdir))))
  (format t (concatenate 'string "~%PPi-report path: " (concatenate 'string workingdir "ppi-report/report.txt")))
  (format t (concatenate 'string "~%PPi-report path: " (concatenate 'string workingdir "/ppi-report/report.txt")))
  )
-
  );progn End of stock block in case there is ppi of one or more featrues
- ;-------------------------------------------------------------------------
-
- ;;If I have not been included ppis, make:--------------------------------
+;-------------------------------------------------------------------------
+;If I have not been included ppis, make:--------------------------------
  (progn
  (if (= (hash-table-count *pan-genoma*) 0)
  (progn
@@ -3513,10 +3119,9 @@
  ))
  );progn
  );if *ppi-identified-pp* *ppi-identified-cn* *ppi-identified-gf*
-
- ;;Unless there were no genes in the pangenome or no ppi was found, make:
+;Unless there were no genes in the pangenome or no ppi was found, make:
  (unless (or (= (hash-table-count *pan-genoma*) 0) (or *ppi-identified-pp* *ppi-identified-cn* *ppi-identified-gf*))
- ;;Creating a pangenome report
+;Creating a pangenome report
  (setf caminho (concatenate 'string workingdir "/pan-genome/" "pan-genome-format-1.txt"))
  (relatorio-pangenoma-1 caminho aadifflimit aacheckminlimit)
  (setf caminho (concatenate 'string workingdir "/pan-genome/" "pan-genome-format-2.txt"))
@@ -3536,9 +3141,8 @@
  ));unless
  );let
  );defun
-;;------------------------------------------------------------------------------
-
-;;Main function to receive the program's parameters and run it
+;------------------------------------------------------------------------------
+;Main function to receive the program's parameters and run it
 (defun main ()
  (let (
  (parameter 1)
@@ -3584,17 +3188,14 @@
  (directory-num 0)
  (qtd-arquivos-fasta 0)
  (machine-learning nil)
- ); let pars
-
- ;The number 31 fixed in this code means that the program can receive up to 28 parameters on the command line.
- ;;I don't worry about how many parameters have been passed, I just check if each of the six possible
- ;was passed and if so I process the parameter.
+ );let pars
+;The number 32 fixed in this code means that the program can receive up to 28 parameters on the command line.
+;I don't worry about how many parameters have been passed, I just check if each of the six possible
+;was passed and if so I process the parameter.
  (dotimes (set 32)
- ;Parameters must always be in tag pairs and tag value. Therefore, for each parameter found,
- ;the first and odd is the tag and the second and even is the value of the parameter.
-
+;Parameters must always be in tag pairs and tag value. Therefore, for each parameter found,
+;the first and odd is the tag and the second and even is the value of the parameter.
  (setf parametertag (nth parameter sb-ext:*posix-argv*))
-
  (unless (or (string= parametertag "-pphistofilter") (string= parametertag "-ppcn")
  (string= parametertag "-ppcomplete") (string= parametertag "-help")
  (string= parametertag "-genefusion") (string= parametertag "-version")
@@ -3602,9 +3203,8 @@
  )
  (setf parametervalue (nth (+ parameter 1) sb-ext:*posix-argv*))
  )
-
- ;(if (and parametertag parametervalue)
- ;Unless the tag does not exist, it turns out who it is.
+;(if (and parametertag parametervalue)
+;Unless the tag does not exist, it turns out who it is.
  (unless (not parametertag)
  (setf help nil)
  (cond
@@ -3612,7 +3212,7 @@
  (progn
  (terpri)
  (format t "GENPPI VERSION: 1.5~%")
- (format t "RELEASE NUMBER: 711b8fe9d42a32fb728ec41118d93f076f7799ff~%")
+ (format t "RELEASE NUMBER: 3480eeba0875c708e85f883ed6fae968843680c6~%")
  (format t "REPOSITORY: https://github.com/santosardr/genppi ~%")
  (terpri)
  (SB-EXT:EXIT)
@@ -3660,7 +3260,7 @@
  (format t "Method 6 - Delete groups of ppi predicted by phylogenetic profile that exceed a limit of interactions by weight~%")
  (format t "-grouplimit <limit of tolerated interactions to maintain a group of ppi with the same weight> (45000-default)~%~%")
  (format t "Method 7 - To exclude genes with unwanted profiles in predicting ppi by phylogenetic profile~%")
- (format t (concatenate 'string "-profiles <number of genomes in the unwanted profiles> Entry example: 7 (genes that co-occur in a total of 7 genomes will be excluded). To insert more than one profile, the entry must be enclosed in single or double quotes, and the values separated by semicolons. Example: ""\"7; 15; 21\"~%~%"))
+ (format t (concatenate 'string "-profiles <number of genomes in the unwanted profiles> Entry example: 7 (genes that co-occur in a total of 7 genomes will be excluded). To insert more than one profile, the entry must be enclosed in single or double quotes, and the values separated by semicolons. Example: ""\"7;15;21\"~%~%"))
  (format t "Parameters of ppi by gene fusion:~%")
  (format t "-genefusion <make ppi predictions by gene fusion>~%")
  (format t "-gfp <gene fusion score percentage> (5-default)~%")
@@ -3809,7 +3409,7 @@
  (format t "The use of methods of prediction of ppi by phylogenetic profile is limited to only 1 among the 7 available methods")
  (terpri)
  (SB-EXT:EXIT)
- ); unless or
+ );unless or
  )
  ((string= parametertag "-ppcomplete")
  (setf ppcomplete "Y")
@@ -3820,7 +3420,7 @@
  (format t "The use of methods of prediction of ppi by phylogenetic profile is limited to only 1 among the 7 available methods")
  (terpri)
  (SB-EXT:EXIT)
- ); unless or
+ );unless or
  )
  ((string= parametertag "-ppiterlimit")
  (setf pplimit "Y")
@@ -3831,7 +3431,7 @@
  (format t "The use of methods of prediction of ppi by phylogenetic profile is limited to only 1 among the 7 available methods")
  (terpri)
  (SB-EXT:EXIT)
- ); unless or
+ );unless or
  (setf ppiterlimit (if parametervalue
  (if (char= (elt parametervalue 0) #\-)
  ppiterlimit
@@ -3867,8 +3467,7 @@
  (format t "The use of methods of prediction of ppi by phylogenetic profile is limited to only 1 among the 7 available methods")
  (terpri)
  (SB-EXT:EXIT)
- ); unless or
-
+ );unless or
  (setf trim (if parametervalue
  (if (char= (elt parametervalue 0) #\-)
  trim
@@ -3904,7 +3503,7 @@
  (format t "The use of methods of prediction of ppi by phylogenetic profile is limited to only 1 among the 7 available methods")
  (terpri)
  (SB-EXT:EXIT)
- ); unless or
+ );unless or
  (setf threshold (if parametervalue
  (if (numberp (read-from-string parametervalue))
  (if (<= (parse-integer parametervalue) 0)
@@ -3943,7 +3542,7 @@
  (format t "The use of methods of prediction of ppi by phylogenetic profile is limited to only 1 among the 7 available methods")
  (terpri)
  (SB-EXT:EXIT)
- ); unless or
+ );unless or
  (setf plusminus (if parametervalue
  (progn
  (unless (or (string= (string parametervalue) "<") (string= (string parametervalue) ">"))
@@ -3974,7 +3573,7 @@
  (format t "The use of methods of prediction of ppi by phylogenetic profile is limited to only 1 among the 7 available methods")
  (terpri)
  (SB-EXT:EXIT)
- ); unless or
+ );unless or
  (setf grouplimit (if parametervalue
  (if (char= (elt parametervalue 0) #\-)
  grouplimit
@@ -4010,7 +3609,7 @@
  (format t "The use of methods of prediction of ppi by phylogenetic profile is limited to only 1 among the 7 available methods")
  (terpri)
  (SB-EXT:EXIT)
- ); unless or
+ );unless or
  (setf profiles (if parametervalue
  (progn
  (loop for c across parametervalue
@@ -4022,7 +3621,7 @@
  (progn
  (terpri)
  (format t "Warning:~%")
- (format t "Invalid parameter: -profiles <number of genomes in the unwanted profiles. Entry example: 7 (genes that co-occur in a total of 7 genomes will be excluded). To enter more than one profile, simply separate the input values with a semicolon. Example: 7; 15; 21>~%")
+ (format t "Invalid parameter: -profiles <number of genomes in the unwanted profiles. Entry example: 7 (genes that co-occur in a total of 7 genomes will be excluded). To enter more than one profile, simply separate the input values with a semicolon. Example: 7;15;21>~%")
  (format t "Invalid character in the -profiles parameter.")
  (terpri)
  (SB-EXT:EXIT)
@@ -4034,7 +3633,7 @@
  (progn
  (terpri)
  (format t "Warning:~%")
- (format t (concatenate 'string "When using the method 7, it is necessary to enter a value greater than zero through the -profiles parameter. Entry example: 7 (genes that co-occur in a total of 7 genomes will be excluded). ""To insert more than one profile, the entry must be enclosed in single or double quotes, and the values separated by semicolons. Example: ""\"7; 15; 21\"~%~%"))
+ (format t (concatenate 'string "When using the method 7, it is necessary to enter a value greater than zero through the -profiles parameter. Entry example: 7 (genes that co-occur in a total of 7 genomes will be excluded). ""To insert more than one profile, the entry must be enclosed in single or double quotes, and the values separated by semicolons. Example: ""\"7;15;21\"~%~%"))
  (terpri)
  (SB-EXT:EXIT)
  ))))
@@ -4408,7 +4007,6 @@
  ((string= parametertag "-ml") (setf machine-learning T))
  );cond
  );unless
-
  (if (or (string= parametertag "-pphistofilter") (string= parametertag "-ppcn")
  (string= parametertag "-ppcomplete") (string= parametertag "-help")
  (string= parametertag "-genefusion") (string= parametertag "-ml")
@@ -4436,10 +4034,9 @@
  )
  (setf parameter (+ parameter 2))
  );if or
- ); if and
+ );if and
  );if or
  );dotimes
-
  (unless (eql help nil)
  (progn
  (terpri)
@@ -4483,7 +4080,7 @@
  (format t "Method 6 - Delete groups of ppi predicted by phylogenetic profile that exceed a limit of interactions by weight~%")
  (format t "-grouplimit <limit of tolerated interactions to maintain a group of ppi with the same weight> (45000-default)~%~%")
  (format t "Method 7 - To exclude genes with unwanted profiles in predicting ppi by phylogenetic profile~%")
- (format t (concatenate 'string "-profiles <number of genomes in the unwanted profiles> Entry example: 7 (genes that co-occur in a total of 7 genomes will be excluded). To insert more than one profile, the entry must be enclosed in single or double quotes, and the values separated by semicolons. Example: ""\"7; 15; 21\"~%~%"))
+ (format t (concatenate 'string "-profiles <number of genomes in the unwanted profiles> Entry example: 7 (genes that co-occur in a total of 7 genomes will be excluded). To insert more than one profile, the entry must be enclosed in single or double quotes, and the values separated by semicolons. Example: ""\"7;15;21\"~%~%"))
  (format t "Parameters of ppi by gene fusion:~%")
  (format t "-genefusion <make ppi predictions by gene fusion>~%")
  (format t "-gfp <gene fusion score percentage> (5-default)~%")
@@ -4494,8 +4091,7 @@
  (terpri)
  (SB-EXT:EXIT)
  ))
-
- ;If you have missed the main data file parameter or the working directory then generate an error and abort the program execution
+;If you have missed the main data file parameter or the working directory then generate an error and abort the program execution
  (if (not workingdir)
  (progn
  (terpri)
@@ -4504,22 +4100,20 @@
  (terpri)
  (SB-EXT:EXIT)
  ))
-
- ;If there is a problem accessing the main data directory then abort and generate an error message
+;If there is a problem accessing the main data directory then abort and generate an error message
  (if (not (probe-file workingdir))
  (progn
  (terpri)
  (format t "Warning:~%")
  (format t "~%~a~%" "Working directory is missing. Assuming current path")
- ;(setf workingdir "./")
+;(setf workingdir "./")
  )
  (progn
  (dolist (path (list-directory workingdir))
-
  (if (eql (pathname-type (pathname path)) nil)
- ;;If the path represents a directory, increment the number of folders in thedirectory.
+;If the path represents a directory, increment the number of folders in thedirectory.
  (setf directory-num (incf directory-num))
- ;;If the path is not from a folder, make:
+;If the path is not from a folder, make:
  (progn
  (if (or (equalp (pathname-type (pathname path)) "fasta")
  (equalp (pathname-type (pathname path)) "fa")
@@ -4531,7 +4125,7 @@
  );if
  );dolist
  (if (or (= directory-num (length (list-directory workingdir))) (= qtd-arquivos-fasta 0))
- ;;If there are only folders in the specified directory, do:
+;If there are only folders in the specified directory, do:
  (progn
  (terpri)
  (format t "Warning:~%")
@@ -4567,22 +4161,20 @@
  (unless (not (string= profiles "0"))
  (terpri)
  (format t "Warning:~%")
- (format t (concatenate 'string "When using the method 7, it is necessary to enter a value greater than zero through the -profiles parameter. Entry example: 7 (genes that co-occur in a total of 7 genomes will be excluded). ""To insert more than one profile, the entry must be enclosed in single or double quotes, and the values separated by semicolons. Example: ""\"7; 15; 21\"~%~%"))
+ (format t (concatenate 'string "When using the method 7, it is necessary to enter a value greater than zero through the -profiles parameter. Entry example: 7 (genes that co-occur in a total of 7 genomes will be excluded). ""To insert more than one profile, the entry must be enclosed in single or double quotes, and the values separated by semicolons. Example: ""\"7;15;21\"~%~%"))
  (terpri)
  (SB-EXT:EXIT)
  );unless
  ));cond
  );progn
  );if or
-
  (terpri)
  (format t "GENPPI VERSION: 1.5~%")
- (format t "RELEASE NUMBER: 711b8fe9d42a32fb728ec41118d93f076f7799ff~%")
+ (format t "RELEASE NUMBER: 3480eeba0875c708e85f883ed6fae968843680c6~%")
  (format t "REPOSITORY: https://github.com/santosardr/genppi ~%~%")
  (format t "Directory parameter:~%")
  (format t "-dir <workingdir> = ~a~%~%" workingdir)
  (format t "Parameters of ppi by conserved neighbourhood:~%")
-
  (cond
  ((and (string= gene-fusion "Y") (eql aux-percentage-cn nil))
  (format t "-cnp <conserved neighbourhood score percentage> = 65% (default)~%")
@@ -4619,7 +4211,6 @@
  );and
  (format t "-cnp <conserved neighbourhood score percentage> = 100%~%")
  ));cond
-
  (if (string= expansion-type "fixed")
  (progn
  (format t "-expt <type of expansion of the conserved gene neighborhood> = ~a~%" "fixed (default)")
@@ -4631,7 +4222,6 @@
  (format t "-cw3 <gene conservation required for window 3> = ~a~%" (if (= cw3 2) (string "2 (default)") (- cw3 0)))
  (format t "-w4 <window size 4> = ~a~%" (if (= w4 3) (string "3 (default)") (- w4 0)))
  (format t "-cw4 <gene conservation required for window 4> = ~a~%~%" (if (= cw4 1) (string "1 (default)") (- cw4 0)))
-
  (if (> w2 w1)
  (progn
  (terpri)
@@ -4695,13 +4285,11 @@
  (SB-EXT:EXIT)
  );progn
  );if
-
  );Prong
  (progn
  (format t "-expt <type of expansion of the conserved gene neighborhood> = ~a~%" expansion-type)
  (format t "-ws <dynamic expansion window size> = ~a~%~%" (if (= window-size 1)(string "1 (default)")(- window-size 0)))
  ));if
-
  (if (or (string= ppcn "Y") (string= ppcomplete "Y") (string= pplimit "Y") (string= pptrim "Y")
  (string= ppthreshold "Y") (string= ppdeletegroup "Y") (string= ppdeleteprofile "Y")
  );or
@@ -4747,7 +4335,6 @@
  (format t "Method 7 - To exclude genes with unwanted profiles in predicting ppi by phylogenetic profile~%")
  (format t "-profiles <number of genomes in the unwanted profiles> Entry = ~a (genes that co-occur in a total of ~a genomes will be excluded)~%" profiles profiles)
  ));cond
-
  (cond
  ((eql aux-percentage-pp nil)
  (format t "-ppp <phylogenetic profiles score percentage> = 30% (default)~%")
@@ -4755,7 +4342,6 @@
  ((not (eql aux-percentage-pp nil))
  (format t "-ppp <phylogenetic profiles score percentage> = ~a%~%" (* percentage-pp 100))
  ));cond
-
  (if (= ppdifftolerated 0)
  (format t "-ppdifftolerated <difference in phylogenetic profiles tolerated to infer ppi> = 0 (default)~%")
  (format t "-ppdifftolerated <difference in phylogenetic profiles tolerated to infer ppi> = ~a~%" ppdifftolerated)
@@ -4775,7 +4361,6 @@
  );if pphistofilter
  );progn
  );if
-
  (cond
  ((and (string= gene-fusion "Y") (= (float percentage-gf) 0.05))
  (format t "Parameters of ppi by gene fusion:~%")
@@ -4785,7 +4370,6 @@
  (format t "Parameters of ppi by gene fusion:~%")
  (format t "-gfp <gene fusion score percentage> = ~a~%~%" (* percentage-gf 100))
  ));cond
-
  (format t "Amino acid histogram parameters:~%")
  (if (= aadifflimit 1)
  (format t "-aadifflimit <amino acid difference limit> 1 (default)~%")
@@ -4797,16 +4381,15 @@
  )
  (if machine-learning
  (if (not (probe-file "model.dat"))
-     (progn
-       (format t "~%~a~%" "ERROR: Random-Forest trained model (model.dat) is missing")
-       (SB-EXT:EXIT)
-       )
-   (progn
-     (format t "~%~a~%" "Loading the Random-Forest 'model.dat' ...")
-     (setf *forest* (deserialize-forest "model.dat"))
-     )
-     ))
- 
+ (progn
+ (format t "~%~a~%" "ERROR: Random-Forest trained model (model.dat) is missing")
+ (SB-EXT:EXIT)
+ )
+ (progn
+ (format t "~%~a~%" "Loading the Random-Forest 'model.dat' ...")
+ (setf *forest* (deserialize-forest "model.dat"))
+ )
+ ))
  (terpri)
  (terpri)
  (format t "Making ppi prediction, please wait.~%")
@@ -4854,4 +4437,4 @@
  );if
  );let
  );defun
-;;------------------------------------------------------------------------------
+;------------------------------------------------------------------------------
