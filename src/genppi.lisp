@@ -725,9 +725,10 @@
 ;Block of functions to predict ppis by Phylogenetic Profile
 (declaim (ftype (function (cons cons) ) comparar-perfis))
 (defun comparar-perfis (lista1 lista2)
- (unless (eql nil (set-exclusive-or lista1 lista2 :test #'string=))
- (length(set-exclusive-or lista1 lista2 :test #'string=))
- ))
+  (let ( (result (set-exclusive-or lista1 lista2 :test #'string=)) )
+    (setf result (if (not result) 0 (length result) ))
+    result)
+  )
 (defparameter *phylogenetic-profiles-ppi* nil "Necessary to update two variables running lparallel:pmap")
 (defparameter *phylogenetic-profiles-ppi-by-score* nil "Necessary to update two variables running lparallel:pmap")
 (defun ppi-tolerance-null-by-score( g percentage-pp pesos-grupos &optional peso-setting)
@@ -1003,7 +1004,7 @@
  (progn
 ;Ordering groups by size, from smallest to largest.
 ;splitting large grupos-identicos into smaller groups with redundant elements
- (setf grupos-identicos (normalize-phylogenetic-profiles-by-size (sort grupos-identicos #'< :key #'third)))
+ (setf grupos-identicos (sort grupos-identicos #'< :key #'third))
 ;By adding to a group g, all groups similar to group g.
  (dotimes (i (1- (length grupos-identicos)))
  (setf grupos-similares (append grupos-similares (list (list (elt grupos-identicos i) (list )))))
@@ -1174,7 +1175,7 @@
  (progn
 ;Ordering groups by size, from smallest to largest.
 ;splitting large grupos-identicos into smaller groups with redundant elements
- (setf grupos-identicos (normalize-phylogenetic-profiles-by-size (sort grupos-identicos #'< :key #'third)))
+ (setf grupos-identicos (sort grupos-identicos #'< :key #'third))
 ;By adding to a group g, all groups similar to group g.
  (dotimes (i (1- (length grupos-identicos)))
  (setf grupos-similares (append grupos-similares (list (list (elt grupos-identicos i) (list )))))
@@ -1344,7 +1345,7 @@
  (progn
 ;Ordering groups by size, from smallest to largest.
 ;splitting large grupos-identicos into smaller groups with redundant elements
- (setf grupos-identicos (normalize-phylogenetic-profiles-by-size (sort grupos-identicos #'< :key #'third)))
+ (setf grupos-identicos  (sort grupos-identicos #'< :key #'third))
 ;Adding to a group g, all groups similar to group g.
  (dotimes (i (1- (length grupos-identicos)))
  (setf grupos-similares (append grupos-similares (list (list (elt grupos-identicos i) (list )))))
@@ -1501,7 +1502,7 @@
  (progn
 ;Ordering groups by size, from smallest to largest.
 ;splitting large grupos-identicos into smaller groups with redundant elements
- (setf grupos-identicos (normalize-phylogenetic-profiles-by-size (sort grupos-identicos #'< :key #'third)))
+ (setf grupos-identicos (sort grupos-identicos #'< :key #'third))
 ;Adding to a group g, all groups similar to group g.
  (dotimes (i (1- (length grupos-identicos)))
  (setf grupos-similares (append grupos-similares (list (list (elt grupos-identicos i) (list )))))
