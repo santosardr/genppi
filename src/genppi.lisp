@@ -375,9 +375,11 @@
 	(setf seqAsf (mapcar #'(lambda (x) (float x 0.0s0)) (cadr seqA))
 	      seqBsf (mapcar #'(lambda (x) (float x 0.0s0)) (cadr seqB))
 	      seqAsize (reduce #'+ (subseq seqAsf 0 19))
-	      seqBsize (reduce #'+ (subseq seqBsf 0 19)))
-	(if (and (>= seqAsize (* similar-size seqBsize)) (>= seqBsize (* similar-size seqAsize)))
-	    (if (not (similar-test-ori seqAsf seqBsf aadifflimit checkpointminlimit))
+	      seqBsize (reduce #'+ (subseq seqBsf 0 19))
+	      test-result (similar-test-ori seqAsf seqBsf aadifflimit checkpointminlimit)
+	      )
+	(if (not test-result)
+	    (if (and (>= seqAsize (* similar-size seqBsize)) (>= seqBsize (* similar-size seqAsize)))
 		(if *forest*
 		    (setf datamatrixAB (make-array (list 1 (* 2 (length seqAsf) ))
 						   :element-type 'single-float
@@ -385,7 +387,6 @@
 			  test-result (CL-RANDOM-FOREST::predict-forest *forest* datamatrixAB 0)
 			  test-result (if (= test-result 0) t nil))
 		  )
-	      (setf test-result t)
 	      )
 	  )
 	test-result
