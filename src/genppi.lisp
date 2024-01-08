@@ -378,16 +378,18 @@
 	      seqBsize (reduce #'+ (subseq seqBsf 0 19)))
 	(if (and (>= seqAsize (* similar-size seqBsize)) (>= seqBsize (* similar-size seqAsize)))
 	    (if (not (similar-test-ori seqAsf seqBsf aadifflimit checkpointminlimit))
-		(setf datamatrixAB (make-array (list 1 (* 2 (length seqAsf) ))
-					       :element-type 'single-float
-					       :initial-contents (list (append seqAsf seqBsf)))
-		      test-result (CL-RANDOM-FOREST::predict-forest *forest* datamatrixAB 0)
-		      test-result (if (= test-result 0) t nil))
+		(if *forest*
+		    (setf datamatrixAB (make-array (list 1 (* 2 (length seqAsf) ))
+						   :element-type 'single-float
+						   :initial-contents (list (append seqAsf seqBsf)))
+			  test-result (CL-RANDOM-FOREST::predict-forest *forest* datamatrixAB 0)
+			  test-result (if (= test-result 0) t nil))
+		  )
 	      (setf test-result t)
 	      )
 	  )
-      test-result
-      )
+	test-result
+	)
     nil
     )
   )
@@ -976,6 +978,7 @@
 (defun normalize-phylogenetic-profiles-by-size ( grupos-identicos )
   ;;splitting large grupos-identicos into smaller groups with redundant elements
   (if grupos-identicos
+      (if *forest*
       (let ( (howmany) )
 	(loop for grupo from 0 to (length grupos-identicos) do
 	      (setf howmany (third (nth grupo grupos-identicos)))
@@ -987,7 +990,7 @@
 					       (split-list (second (nth grupo grupos-identicos))
 							   (round (* howmany 0.950))
 							   (calculate-redundancy howmany))))
-		    )))))
+		    ))))))
   grupos-identicos
   )
 (defun deduplicate-ppi-list (ppi-list)
@@ -3579,12 +3582,13 @@
  (aacheckminlimit 25)
  (directory-num 0)
  (qtd-arquivos-fasta 0)
+ (machine-learning nil)
  ); let pars
 
  ;The number 31 fixed in this code means that the program can receive up to 28 parameters on the command line.
  ;;I don't worry about how many parameters have been passed, I just check if each of the six possible
  ;was passed and if so I process the parameter.
- (dotimes (set 31)
+ (dotimes (set 32)
  ;Parameters must always be in tag pairs and tag value. Therefore, for each parameter found,
  ;the first and odd is the tag and the second and even is the value of the parameter.
 
@@ -3593,6 +3597,7 @@
  (unless (or (string= parametertag "-pphistofilter") (string= parametertag "-ppcn")
  (string= parametertag "-ppcomplete") (string= parametertag "-help")
  (string= parametertag "-genefusion") (string= parametertag "-version")
+ (string= parametertag "-ml")
  )
  (setf parametervalue (nth (+ parameter 1) sb-ext:*posix-argv*))
  )
@@ -4399,12 +4404,13 @@
  (SB-EXT:EXIT)
  ))
  ))
+ ((string= parametertag "-ml") (setf machine-learning T))
  );cond
  );unless
 
  (if (or (string= parametertag "-pphistofilter") (string= parametertag "-ppcn")
  (string= parametertag "-ppcomplete") (string= parametertag "-help")
- (string= parametertag "-genefusion")
+ (string= parametertag "-genefusion") (string= parametertag "-ml")
  )
  (setf parameter (+ parameter 1))
  #|(if (char= (elt parametervalue 0) #\-)
@@ -4788,7 +4794,7 @@
  (format t "-aacheckminlimit <minimum amount of amino acids to check> 25 (default)~%")
  (format t "-aacheckminlimit <minimum amount of amino acids to check> ~a~%" aacheckminlimit)
  )
- 
+ (if machine-learning
  (if (not (probe-file "model.dat"))
      (progn
        (format t "~%~a~%" "ERROR: Random-Forest trained model (model.dat) is missing")
@@ -4798,7 +4804,7 @@
      (format t "~%~a~%" "Loading the Random-Forest 'model.dat' ...")
      (setf *forest* (deserialize-forest "model.dat"))
      )
-     );if
+     ))
  
  (terpri)
  (terpri)
