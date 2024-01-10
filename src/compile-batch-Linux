@@ -1,0 +1,15 @@
+sbcl --noinform --dynamic-space-size 4096 --control-stack-size 20  --load genppi.lisp --eval "(save-lisp-and-die \"genppi4g-Linux\" :executable t :save-runtime-options t :toplevel 'main)"
+
+sbcl --noinform --dynamic-space-size 8192 --control-stack-size 20  --load genppi.lisp --eval "(save-lisp-and-die \"genppi8g-Linux\" :executable t :save-runtime-options t :toplevel 'main)"
+
+sbcl --noinform --dynamic-space-size 16384 --control-stack-size 20  --load genppi.lisp --eval "(save-lisp-and-die \"genppi16g-Linux\" :executable t :save-runtime-options t :toplevel 'main)"
+
+sbcl --noinform --dynamic-space-size 32768 --control-stack-size 20  --load genppi.lisp --eval "(save-lisp-and-die \"genppi32g-Linux\" :executable t :save-runtime-options t :toplevel 'main)"
+
+sbcl --noinform --dynamic-space-size 4096 --control-stack-size 20  --load genppidb.lisp --eval "(save-lisp-and-die \"genppidb4g-Linux\" :executable t :save-runtime-options t :toplevel 'main)"
+
+sbcl --noinform --dynamic-space-size 8192 --control-stack-size 20  --load genppidb.lisp --eval "(save-lisp-and-die \"genppidb8g-Linux\" :executable t :save-runtime-options t :toplevel 'main)"
+
+sbcl --noinform --dynamic-space-size 16384 --control-stack-size 20  --load genppidb.lisp --eval "(save-lisp-and-die \"genppidb16g-Linux\" :executable t :save-runtime-options t :toplevel 'main)"
+
+sbcl --noinform --dynamic-space-size 32768 --control-stack-size 20  --load genppidb.lisp --eval "(save-lisp-and-die \"genppidb32g-Linux\" :executable t :save-runtime-options t :toplevel 'main)"
