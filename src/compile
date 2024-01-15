@@ -1,5 +1,5 @@
 #!/bin/bash -
-if [ $# -gt 0 ]
+if [ $# -gt 1 ]
 then
     file=$1;
     mem=`echo "scale=0;$2*1024" | bc -l`;echo $mem
