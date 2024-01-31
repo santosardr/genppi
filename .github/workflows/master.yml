@@ -32,14 +32,22 @@ jobs:
         restore-keys: |
           ${{ runner.os }}-quicklisp-
 
+    - name: Move Lisp files to Quicklisp local-projects directory
+      run: |
+        mkdir -p ~/quicklisp/local-projects/
+        cp src/features.asd src/features.lisp ~/quicklisp/local-projects/
+
+    - name: Register local projects with Quicklisp
+      run: |
+        sbcl --non-interactive \
+             --load ~/quicklisp/setup.lisp \
+             --eval '(ql:register-local-projects)' \
+             --eval '(quit)'
+
     - name: Load dependencies and local projects
       run: |
         sbcl --non-interactive \
              --load ~/quicklisp/setup.lisp \
-             --eval '(push (merge-pathnames "src/" (user-homedir-pathname)) ql:*local-project-directories*)' \
-             --eval '(ql:quickload :lparallel)' \
-             --eval '(ql:quickload :cl-random-forest)' \
-             --eval '(ql:quickload :cl-store)' \
              --eval '(ql:quickload :features)'
 
     - name: Build and save the executable
