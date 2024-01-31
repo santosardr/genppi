@@ -44,16 +44,14 @@ jobs:
              --eval '(ql:register-local-projects)' \
              --eval '(quit)'
 
-    - name: Ensure :features package is loaded
+    - name: Ensure :features package is loaded, Build and save the executable
       run: |
-        sbcl --non-interactive \
+       sbcl --noinform --dynamic-space-size 8192 --control-stack-size 20 \
              --load ~/quicklisp/setup.lisp \
              --eval '(unless (find-package :features) (require :features))' \
-             --eval '(quit)'
-             
-    - name: Build and save the executable
-      run: |
-        sbcl --noinform --dynamic-space-size 8192 --control-stack-size 20 \
+	     --eval '(unless (find-package :lparallel) (ql:quickload :lparallel))' \
+             --eval '(unless (find-package :cl-random-forest) (ql:quickload :cl-random-forest))' \
+             --eval '(unless (find-package :cl-store) (ql:quickload :cl-store ))' \
              --load src/genppi.lisp \
              --eval "(save-lisp-and-die \"binaries/genppi8g-Mac.x\" :executable t :save-runtime-options t :toplevel 'main)"
 
