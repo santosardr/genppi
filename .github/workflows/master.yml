@@ -44,7 +44,7 @@ jobs:
              --eval '(ql:register-local-projects)' \
              --eval '(quit)'
 
-    - name: Ensure :features package is loaded, Build and save the executable
+    - name: Ensure features package is loaded, Build and save the executable
       run: |
         sbcl --noinform --dynamic-space-size 8192 --control-stack-size 20 \
              --load ~/quicklisp/setup.lisp \
