@@ -44,12 +44,13 @@ jobs:
              --eval '(ql:register-local-projects)' \
              --eval '(quit)'
 
-    - name: Load dependencies and local projects
+    - name: Ensure :features package is loaded
       run: |
         sbcl --non-interactive \
              --load ~/quicklisp/setup.lisp \
-             --eval '(ql:quickload :features)'
-
+             --eval '(unless (find-package :features) (require :features))' \
+             --eval '(quit)'
+             
     - name: Build and save the executable
       run: |
         sbcl --noinform --dynamic-space-size 8192 --control-stack-size 20 \
