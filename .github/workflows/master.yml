@@ -46,19 +46,71 @@ jobs:
             --eval '(ql:register-local-projects)' \
             --eval '(quit)'
 
-      - name: Ensure features package is loaded, Build and save the executable
+      - name: Build and save the executable genppi 4g
+        run: |
+          sbcl --noinform --dynamic-space-size 4096 --control-stack-size 20 \
+            --load ~/quicklisp/setup.lisp \
+            --load src/genppi.lisp \
+            --eval "(save-lisp-and-die \"binaries/genppi4g-Mac.x\" \
+              :executable t :save-runtime-options t :toplevel 'main)"
+
+      - name: Build and save the executable genppi 8g
         run: |
           sbcl --noinform --dynamic-space-size 8192 --control-stack-size 20 \
             --load ~/quicklisp/setup.lisp \
-            --eval '(unless (find-package :features) (require :features))' \
-            --eval '(unless (find-package :lparallel) (ql:quickload :lparallel))' \
-            --eval '(unless (find-package :cl-random-forest) (ql:quickload :cl-random-forest))' \
-            --eval '(unless (find-package :cl-store) (ql:quickload :cl-store))' \
             --load src/genppi.lisp \
             --eval "(save-lisp-and-die \"binaries/genppi8g-Mac.x\" \
               :executable t :save-runtime-options t :toplevel 'main)"
 
-      - name: Test the executable
+      - name: Build and save the executable genppi 16g
+        run: |
+          sbcl --noinform --dynamic-space-size 16384 --control-stack-size 20 \
+            --load ~/quicklisp/setup.lisp \
+            --load src/genppi.lisp \
+            --eval "(save-lisp-and-die \"binaries/genppi16g-Mac.x\" \
+              :executable t :save-runtime-options t :toplevel 'main)"
+
+      - name: Build and save the executable genppi 32g
+        run: |
+          sbcl --noinform --dynamic-space-size 32768 --control-stack-size 20 \
+            --load ~/quicklisp/setup.lisp \
+            --load src/genppi.lisp \
+            --eval "(save-lisp-and-die \"binaries/genppi32g-Mac.x\" \
+              :executable t :save-runtime-options t :toplevel 'main)"
+
+      - name: Build and save the executable genppidb 4g
+        run: |
+          sbcl --noinform --dynamic-space-size 4096 --control-stack-size 20 \
+            --load ~/quicklisp/setup.lisp \
+            --load src/genppidb.lisp \
+            --eval "(save-lisp-and-die \"binaries/genppidb4g-Mac.x\" \
+              :executable t :save-runtime-options t :toplevel 'main)"
+
+      - name: Build and save the executable genppidb 8g
+        run: |
+          sbcl --noinform --dynamic-space-size 8192 --control-stack-size 20 \
+            --load ~/quicklisp/setup.lisp \
+            --load src/genppidb.lisp \
+            --eval "(save-lisp-and-die \"binaries/genppidb8g-Mac.x\" \
+              :executable t :save-runtime-options t :toplevel 'main)"
+
+      - name: Build and save the executable genppidb 16g
+        run: |
+          sbcl --noinform --dynamic-space-size 16384 --control-stack-size 20 \
+            --load ~/quicklisp/setup.lisp \
+            --load src/genppidb.lisp \
+            --eval "(save-lisp-and-die \"binaries/genppidb16g-Mac.x\" \
+              :executable t :save-runtime-options t :toplevel 'main)"
+
+      - name: Build and save the executable genppidb 32g
+        run: |
+          sbcl --noinform --dynamic-space-size 32768 --control-stack-size 20 \
+            --load ~/quicklisp/setup.lisp \
+            --load src/genppidb.lisp \
+            --eval "(save-lisp-and-die \"binaries/genppidb32g-Mac.x\" \
+              :executable t :save-runtime-options t :toplevel 'main)"
+
+      - name: Test the executable 8g
         run: |
           if [ -f binaries/genppi8g-Mac.x ]; then
             chmod +x binaries/genppi8g-Mac.x
@@ -68,8 +120,51 @@ jobs:
             exit 1
           fi
 
-      - name: Upload the macOS executable as an artifact
+      - name: Upload the macOS executable 4g as an artifact
+        uses: actions/upload-artifact@v2
+        with:
+          name: genppi4g-Mac
+          path: binaries/genppi4g-Mac.x
+
+      - name: Upload the macOS executable 8g as an artifact
         uses: actions/upload-artifact@v2
         with:
           name: genppi8g-Mac
           path: binaries/genppi8g-Mac.x
+
+      - name: Upload the macOS executable 16g as an artifact
+        uses: actions/upload-artifact@v2
+        with:
+          name: genppi16g-Mac
+          path: binaries/genppi16g-Mac.x
+
+      - name: Upload the macOS executable 32g as an artifact
+        uses: actions/upload-artifact@v2
+        with:
+          name: genppi32g-Mac
+          path: binaries/genppi32g-Mac.x
+
+      - name: Upload the macOS executable db4g as an artifact
+        uses: actions/upload-artifact@v2
+        with:
+          name: genppidb4g-Mac
+          path: binaries/genppidb4g-Mac.x
+
+      - name: Upload the macOS executable db8g as an artifact
+        uses: actions/upload-artifact@v2
+        with:
+          name: genppidb8g-Mac
+          path: binaries/genppidb8g-Mac.x
+
+      - name: Upload the macOS executable db16g as an artifact
+        uses: actions/upload-artifact@v2
+        with:
+          name: genppidb16g-Mac
+          path: binaries/genppidb16g-Mac.x
+
+      - name: Upload the macOS executable db32g as an artifact
+        uses: actions/upload-artifact@v2
+        with:
+          name: genppidb32g-Mac
+          path: binaries/genppidb32g-Mac.x
+
