@@ -52,8 +52,7 @@ jobs:
             --load ~/quicklisp/setup.lisp \
             --eval '(unless (find-package :features) (require :features))' \
             --eval '(unless (find-package :lparallel) (ql:quickload :lparallel))' \
-            --eval '(unless (find-package :cl-random-forest)\
-            (ql:quickload :cl-random-forest))' \
+            --eval '(unless (find-package :cl-random-forest) (ql:quickload :cl-random-forest))' \
             --eval '(unless (find-package :cl-store) (ql:quickload :cl-store))' \
             --load src/genppi.lisp \
             --eval "(save-lisp-and-die \"binaries/genppi8g-Mac.x\" \
@@ -63,7 +62,7 @@ jobs:
         run: |
           if [ -f binaries/genppi8g-Mac.x ]; then
             chmod +x binaries/genppi8g-Mac.x
-            ./binaries/genppi8g-Mac.x -version # ou algum outro comando de teste rápido
+            binaries/genppi8g-Mac.x -version # ou algum outro comando de teste rápido
           else
             echo "Executable does not exist."
             exit 1
@@ -73,4 +72,4 @@ jobs:
         uses: actions/upload-artifact@v2
         with:
           name: genppi8g-Mac
-          path: binaries/genppi8g-Mac.x
+          path: ./binaries/genppi8g-Mac.x
