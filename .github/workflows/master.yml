@@ -29,8 +29,7 @@ jobs:
         uses: actions/cache@v2
         with:
           path: ~/quicklisp/
-          key: ${{ runner.os }}-quicklisp-${{ \
-            hashFiles('**/*.asd', '**/*.lisp') }}
+          key: ${{ runner.os }}-quicklisp-${{ hashFiles('**/*.asd', '**/*.lisp') }}
             restore-keys: |
               ${{ runner.os }}-quicklisp-
 
