@@ -13,50 +13,56 @@ jobs:
     runs-on: macos-latest
 
     steps:
-    - name: Checkout repository
-      uses: actions/checkout@v2
+      - name: Checkout repository
+        uses: actions/checkout@v2
 
-    - name: Install SBCL
-      run: brew install sbcl
+      - name: Install SBCL
+        run: brew install sbcl
 
-    - name: Setup Quicklisp
-      run: |
-        curl -O https://beta.quicklisp.org/quicklisp.lisp
-        sbcl --non-interactive --load quicklisp.lisp --eval '(quicklisp-quickstart:install)'
+      - name: Setup Quicklisp
+        run: |
+          curl -O https://beta.quicklisp.org/quicklisp.lisp
+          sbcl --non-interactive --load quicklisp.lisp --eval \
+          '(quicklisp-quickstart:install)'
 
-    - name: Cache Quicklisp packages
-      uses: actions/cache@v2
-      with:
-        path: ~/quicklisp/
-        key: ${{ runner.os }}-quicklisp-${{ hashFiles('**/*.asd', '**/*.lisp') }}
-        restore-keys: |
-          ${{ runner.os }}-quicklisp-
+      - name: Cache Quicklisp packages
+        uses: actions/cache@v2
+        with:
+          path: ~/quicklisp/
+          key: ${{ runner.os }}-quicklisp-${{ \
+            hashFiles('**/*.asd', '**/*.lisp') }}
+            restore-keys: |
+              ${{ runner.os }}-quicklisp-
 
-    - name: Move Lisp files to Quicklisp local-projects directory
-      run: |
-        mkdir -p ~/quicklisp/local-projects/
-        cp src/features.asd src/features.lisp ~/quicklisp/local-projects/
+      - name: Move Lisp files to Quicklisp local-projects directory
+        run: |
+          mkdir -p ~/quicklisp/local-projects/
+          cp src/features.asd src/features.lisp ~/quicklisp/local-projects/
 
-    - name: Register local projects with Quicklisp
-      run: |
-        sbcl --non-interactive \
-             --load ~/quicklisp/setup.lisp \
-             --eval '(ql:register-local-projects)' \
-             --eval '(quit)'
+      - name: Register local projects with Quicklisp
+        run: |
+          sbcl --non-interactive \
+              --load ~/quicklisp/setup.lisp \
+              --eval '(ql:register-local-projects)' \
+              --eval '(quit)'
 
-    - name: Ensure features package is loaded, Build and save the executable
-      run: |
-        sbcl --noinform --dynamic-space-size 8192 --control-stack-size 20 \
-             --load ~/quicklisp/setup.lisp \
-             --eval '(unless (find-package :features) (require :features))' \
-	     --eval '(unless (find-package :lparallel) (ql:quickload :lparallel))' \
-             --eval '(unless (find-package :cl-random-forest) (ql:quickload :cl-random-forest))' \
-             --eval '(unless (find-package :cl-store) (ql:quickload :cl-store ))' \
-             --load src/genppi.lisp \
-             --eval "(save-lisp-and-die \"binaries/genppi8g-Mac.x\" :executable t :save-runtime-options t :toplevel 'main)"
+      - name: Ensure features package is loaded, Build and save the executable
+        run: |
+          sbcl --noinform --dynamic-space-size 8192 --control-stack-size 20 \
+              --load ~/quicklisp/setup.lisp \
+              --eval '(unless (find-package :features) (require :features))' \
+              --eval '(unless (find-package :lparallel) \
+              (ql:quickload :lparallel))' \
+              --eval '(unless (find-package :cl-random-forest) \
+              (ql:quickload :cl-random-forest))' \
+              --eval '(unless (find-package :cl-store) \
+              (ql:quickload :cl-store ))' \
+              --load src/genppi.lisp \
+              --eval "(save-lisp-and-die \"binaries/genppi8g-Mac.x\" \
+              :executable t :save-runtime-options t :toplevel 'main)"
 
-    - name: Upload the macOS executable as an artifact
-      uses: actions/upload-artifact@v2
-      with:
-        name: genppi8g-Mac
-        path: binaries/genppi8g-Mac.x
+      - name: Upload the macOS executable as an artifact
+        uses: actions/upload-artifact@v2
+        with:
+          name: genppi8g-Mac
+          path: binaries/genppi8g-Mac.x
