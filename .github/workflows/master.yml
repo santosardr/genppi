@@ -62,6 +62,7 @@ jobs:
       - name: Test the executable
         run: |
           if [ -f binaries/genppi8g-Mac.x ]; then
+            chmod +x binaries/genppi8g-Mac.x
             ./binaries/genppi8g-Mac.x -version # ou algum outro comando de teste rápido
           else
             echo "Executable does not exist."
