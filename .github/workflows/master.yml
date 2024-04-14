@@ -11,6 +11,7 @@ on:
 
 jobs:
   build:
+    if: contains(github.event.head_commit.modified, 'src/genppi.lisp') || contains(github.event.head_commit.modified, 'src/genppidb.lisp')
     runs-on: macos-latest
 
     steps:
@@ -167,4 +168,3 @@ jobs:
         with:
           name: genppidb32g-Mac
           path: binaries/genppidb32g-Mac.x
-
