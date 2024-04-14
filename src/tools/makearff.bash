@@ -92,7 +92,7 @@ then
     progress_bar 20
     countfasta $dir/protein.faa > $dir/protein.size
     progress_bar 25
-    awk -v dir="$dir" '{if ( int($3)>=65 && int ($8-$7)>= int(0.90*($10-$9)) ){ search_result=system("grep " $1 " " dir "/protein.size | cut -f 2");split(search_result, size, "\n");if (int($8-$7)>=int(0.90*size[0])){printf("%s\n", $0) } } }' $dir/blast_protein.distintas | grep -v ^[0-9] > $dir/blast_protein_positivo
+    awk -v dir="$dir" '{if ( int($3)>=65 && int ($8-$7)>= int(0.90*($10-$9)) ){ cmd = "grep " $1 " " dir "/protein.size | cut -f 2"; if ( (cmd | getline search_result) > 0 ) { split(search_result, size, "\t"); if (int($8-$7) >= int(0.90*size[1])){ printf("%s\n", $0); } } close(cmd); }}' $dir/blast_protein.distintas > $dir/blast_protein_positivo
     progress_bar 30
     awk -v neg="$neg" 'BEGIN { srand();neg=neg/100}{ rand_val = rand();if (int($3) < 65 && rand_val < neg) { printf("%s\n", $0) } }' $dir/blast_protein.distintas | grep -v ^[0-9] > $dir/blast_protein_negativo
     progress_bar 35
