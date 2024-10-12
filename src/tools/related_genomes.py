@@ -1,6 +1,7 @@
 #!/usr/bin/python3
 import sys
 from collections import Counter
+from tqdm import tqdm
 
 def count_similar_genomes(input_file, target_genome):
     """
@@ -17,7 +18,13 @@ def count_similar_genomes(input_file, target_genome):
     target_scope = False
 
     with open(input_file, 'r') as file:
+        linhas_total = sum(1 for _ in file)  # Conta o total de linhas no arquivo
+        file.seek(0)  # Volta para o início do arquivo
+        pbar = tqdm(total=linhas_total, desc="Processando linhas", unit="linhas", mininterval=1, miniters=50000)
+        
         for line in file:
+            pbar.update(1)  # Atualiza a barra de progresso
+            
             if line.startswith("Protein:") and line.endswith(target_genome + "\n"):
                 target_scope = True
             elif target_scope and line.startswith("Protein:") and "Genome:" in line:
@@ -27,6 +34,7 @@ def count_similar_genomes(input_file, target_genome):
             elif line.startswith("----"):
                 target_scope = False
 
+    pbar.close()  # Fecha a barra de progresso
     return genome_counts
 
 def print_help():
