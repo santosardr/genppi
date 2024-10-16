@@ -194,9 +194,9 @@ jobs:
 
       - name: Move Lisp files to Quicklisp local-projects directory
         run: |
-          mkdir "%%USERPROFILE%%\\quicklisp\\local-projects"
-          copy src\\features.asd src\\features.lisp "%%USERPROFILE%%\\quicklisp\\local-projects"
-          
+          mkdir "%USERPROFILE%\quicklisp\local-projects"
+          copy src\features.asd src\features.lisp "%USERPROFILE%\quicklisp\local-projects"
+        
       - name: Register local projects with Quicklisp
         run: |
           sbcl --non-interactive --load "%%USERPROFILE%%"\\quicklisp\\setup.lisp --eval "(ql:register-local-projects)" --eval "(quit)"
