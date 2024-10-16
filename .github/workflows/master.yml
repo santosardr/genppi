@@ -194,6 +194,10 @@ jobs:
 
       - name: Move Lisp files to Quicklisp local-projects directory
         run: |
+          Copy-Item -Path src\features.asd, src\features.lisp -Destination "$env:USERPROFILE\quicklisp\local-projects"
+
+      - name: Move Lisp files to Quicklisp local-projects directory
+        run: |
           copy src\features.asd src\features.lisp "$env:USERPROFILE\quicklisp\local-projects"
         
       - name: Register local projects with Quicklisp
