@@ -205,7 +205,7 @@ jobs:
           sbcl --noinform --dynamic-space-size 4096 --control-stack-size 20 `
             --load "$env:USERPROFILE\\quicklisp\\setup.lisp" `
             --load src/genppi.lisp `
-            --eval "(save-lisp-and-die \\"binaries/genppi4g-Win.exe\\" :executable t :save-runtime-options t :toplevel 'main)"
+            --eval "(save-lisp-and-die 'binaries/genppi4g-Win.exe' :executable t :save-runtime-options t :toplevel 'main)"
 
       - name: Build and save the executable genppi 8g
         run: |
