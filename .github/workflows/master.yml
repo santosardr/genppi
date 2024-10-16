@@ -16,7 +16,7 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v2
+        uses: actions/checkout@v4
 
       - name: Install SBCL
         run: brew install sbcl
@@ -28,7 +28,7 @@ jobs:
             --eval '(quicklisp-quickstart:install)'
 
       - name: Cache Quicklisp packages
-        uses: actions/cache@v2
+        uses: actions/cache@v4
         with:
           path: ~/quicklisp/
           key: ${{ runner.os }}-quicklisp-${{ hashFiles('**/*.asd', '**/*.lisp') }}
@@ -122,49 +122,49 @@ jobs:
           fi
 
       - name: Upload the macOS executable 4g as an artifact
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v4
         with:
           name: genppi4g-Mac
           path: binaries/genppi4g-Mac.x
 
       - name: Upload the macOS executable 8g as an artifact
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v4
         with:
           name: genppi8g-Mac
           path: binaries/genppi8g-Mac.x
 
       - name: Upload the macOS executable 16g as an artifact
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v4
         with:
           name: genppi16g-Mac
           path: binaries/genppi16g-Mac.x
 
       - name: Upload the macOS executable 32g as an artifact
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v4
         with:
           name: genppi32g-Mac
           path: binaries/genppi32g-Mac.x
 
       - name: Upload the macOS executable db4g as an artifact
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v4
         with:
           name: genppidb4g-Mac
           path: binaries/genppidb4g-Mac.x
 
       - name: Upload the macOS executable db8g as an artifact
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v4
         with:
           name: genppidb8g-Mac
           path: binaries/genppidb8g-Mac.x
 
       - name: Upload the macOS executable db16g as an artifact
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v4
         with:
           name: genppidb16g-Mac
           path: binaries/genppidb16g-Mac.x
 
       - name: Upload the macOS executable db32g as an artifact
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v4
         with:
           name: genppidb32g-Mac
           path: binaries/genppidb32g-Mac.x
@@ -174,41 +174,41 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v2
+        uses: actions/checkout@v4
 
       - name: Install SBCL
         run: choco install sbcl
 
       - name: Setup Quicklisp
         run: |
-          curl -O https://beta.quicklisp.org/quicklisp.lisp &&
+          powershell -Command "Invoke-WebRequest -Uri https://beta.quicklisp.org/quicklisp.lisp -OutFile quicklisp.lisp"
           sbcl --non-interactive --load quicklisp.lisp \
             --eval '(quicklisp-quickstart:install)'
 
       - name: Cache Quicklisp packages
-        uses: actions/cache@v2
+        uses: actions/cache@v4
         with:
-          path: ~/quicklisp/
+          path: "%USERPROFILE%\\quicklisp\"
           key: ${{ runner.os }}-quicklisp-${{ hashFiles('**/*.asd', '**/*.lisp') }}
           restore-keys: |
             ${{ runner.os }}-quicklisp-
 
       - name: Move Lisp files to Quicklisp local-projects directory
         run: |
-          mkdir -p ~/quicklisp/local-projects/ &&
-          cp src/features.asd src/features.lisp ~/quicklisp/local-projects/
+          mkdir "%USERPROFILE%\quicklisp\local-projects"
+          copy src\features.asd src\features.lisp "%USERPROFILE%\quicklisp\local-projects\"
 
       - name: Register local projects with Quicklisp
         run: |
           sbcl --non-interactive \
-            --load ~/quicklisp/setup.lisp \
+            --load "%USERPROFILE%"\quicklisp\setup.lisp \
             --eval '(ql:register-local-projects)' \
             --eval '(quit)'
 
       - name: Build and save the executable genppi 4g
         run: |
           sbcl --noinform --dynamic-space-size 4096 --control-stack-size 20 \
-            --load ~/quicklisp/setup.lisp \
+            --load "%USERPROFILE%"\quicklisp\setup.lisp \
             --load src/genppi.lisp \
             --eval "(save-lisp-and-die \"binaries/genppi4g-Win.exe\" \
               :executable t :save-runtime-options t :toplevel 'main)"
@@ -216,7 +216,7 @@ jobs:
       - name: Build and save the executable genppi 8g
         run: |
           sbcl --noinform --dynamic-space-size 8192 --control-stack-size 20 \
-            --load ~/quicklisp/setup.lisp \
+            --load "%USERPROFILE%"\quicklisp\setup.lisp \
             --load src/genppi.lisp \
             --eval "(save-lisp-and-die \"binaries/genppi8g-Win.exe\" \
               :executable t :save-runtime-options t :toplevel 'main)"
@@ -224,7 +224,7 @@ jobs:
       - name: Build and save the executable genppi 16g
         run: |
           sbcl --noinform --dynamic-space-size 16384 --control-stack-size 20 \
-            --load ~/quicklisp/setup.lisp \
+            --load "%USERPROFILE%"\quicklisp\setup.lisp \
             --load src/genppi.lisp \
             --eval "(save-lisp-and-die \"binaries/genppi16g-Win.exe\" \
               :executable t :save-runtime-options t :toplevel 'main)"
@@ -232,7 +232,7 @@ jobs:
       - name: Build and save the executable genppi 32g
         run: |
           sbcl --noinform --dynamic-space-size 32768 --control-stack-size 20 \
-            --load ~/quicklisp/setup.lisp \
+            --load "%USERPROFILE%"\quicklisp\setup.lisp \
             --load src/genppi.lisp \
             --eval "(save-lisp-and-die \"binaries/genppi32g-Win.exe\" \
               :executable t :save-runtime-options t :toplevel 'main)"
@@ -240,7 +240,7 @@ jobs:
       - name: Build and save the executable genppidb 4g
         run: |
           sbcl --noinform --dynamic-space-size 4096 --control-stack-size 20 \
-            --load ~/quicklisp/setup.lisp \
+            --load "%USERPROFILE%"\quicklisp\setup.lisp \
             --load src/genppidb.lisp \
             --eval "(save-lisp-and-die \"binaries/genppidb4g-Win.exe\" \
               :executable t :save-runtime-options t :toplevel 'main)"
@@ -248,7 +248,7 @@ jobs:
       - name: Build and save the executable genppidb 8g
         run: |
           sbcl --noinform --dynamic-space-size 8192 --control-stack-size 20 \
-            --load ~/quicklisp/setup.lisp \
+            --load "%USERPROFILE%"\quicklisp\setup.lisp \
             --load src/genppidb.lisp \
             --eval "(save-lisp-and-die \"binaries/genppidb8g-Win.exe\" \
               :executable t :save-runtime-options t :toplevel 'main)"
@@ -256,14 +256,14 @@ jobs:
       - name: Build and save the executable genppidb 16g
         run: |
           sbcl --noinform --dynamic-space-size 16384 --control-stack-size 20 \
-            --load ~/quicklisp/setup.lisp \
+            --load "%USERPROFILE%"\quicklisp\setup.lisp \
             --load src/genppidb.lisp \
             --eval "(save-lisp-and-die \"binaries/genppidb16g-Win.exe\" \
               :executable t :save-runtime-options t :toplevel 'main)"
       - name: Build and save the executable genppidb 32g
         run: |
           sbcl --noinform --dynamic-space-size 32768 --control-stack-size 20 \
-            --load ~/quicklisp/setup.lisp \
+            --load "%USERPROFILE%"\quicklisp\setup.lisp \
             --load src/genppidb.lisp \
             --eval "(save-lisp-and-die \"binaries/genppidb32g-Win.exe\" \
-              :executable t :save-runtime-options t :toplevel 'main)"                            
+              :executable t :save-runtime-options t :toplevel 'main)"
