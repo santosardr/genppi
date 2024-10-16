@@ -11,7 +11,7 @@ on:
 
 jobs:
   mac-build:
-    if: contains(github.event.head_commit.message, 'COMPILE')
+    if: contains(github.event.head_commit.message, 'COMPILEMAC')
     runs-on: macos-latest
 
     steps:
@@ -169,7 +169,7 @@ jobs:
           name: genppidb32g-Mac
           path: binaries/genppidb32g-Mac.x
   windows-build:
-    if: contains(github.event.head_commit.message, 'COMPILE')
+    if: contains(github.event.head_commit.message, 'COMPILEWIN')
     runs-on: windows-latest
 
     steps:
@@ -182,8 +182,7 @@ jobs:
       - name: Setup Quicklisp
         run: |
           powershell -Command "Invoke-WebRequest -Uri https://beta.quicklisp.org/quicklisp.lisp -OutFile quicklisp.lisp"
-          sbcl --non-interactive --load quicklisp.lisp \
-            --eval '(quicklisp-quickstart:install)'
+          & sbcl --non-interactive --load quicklisp.lisp --eval "(quicklisp-quickstart:install)"
 
       - name: Cache Quicklisp packages
         uses: actions/cache@v4
@@ -200,10 +199,7 @@ jobs:
 
       - name: Register local projects with Quicklisp
         run: |
-          sbcl --non-interactive \
-            --load "%USERPROFILE%"\\quicklisp\\setup.lisp \
-            --eval '(ql:register-local-projects)' \
-            --eval '(quit)'
+          sbcl --non-interactive --load "%USERPROFILE%"\\quicklisp\\setup.lisp --eval "(ql:register-local-projects)" --eval "(quit)"
 
       - name: Build and save the executable genppi 4g
         run: |
