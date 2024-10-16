@@ -3710,7 +3710,7 @@
  ppaacheckminlimit
  )))
  ((string= parametertag "-ppcn")
- (setf ppcn "Y")
+ (setf ppcn "Y" ppcomplete "N")
  (unless (and (string= ppcomplete "N") (string= pplimit "N") (string= pptrim "N")
  (string= ppthreshold "N") (string= ppdeletegroup "N") (string= ppdeleteprofile "N"))
  (terpri)
@@ -3732,7 +3732,7 @@
  );unless or
  )
  ((string= parametertag "-ppiterlimit")
- (setf pplimit "Y")
+ (setf pplimit "Y" ppcomplete "N")
  (unless (and (string= ppcomplete "N") (string= ppcn "N") (string= pptrim "N")
  (string= ppthreshold "N") (string= ppdeletegroup "N") (string= ppdeleteprofile "N"))
  (terpri)
@@ -3768,7 +3768,7 @@
  ppiterlimit
  )))
  ((string= parametertag "-trim")
- (setf pptrim "Y")
+ (setf pptrim "Y" ppcomplete "N")
  (unless (and (string= ppcomplete "N") (string= pplimit "N") (string= ppcn "N")
  (string= ppthreshold "N") (string= ppdeletegroup "N") (string= ppdeleteprofile "N"))
  (terpri)
@@ -3804,7 +3804,7 @@
  trim
  )))
  ((string= parametertag "-threshold")
- (setf ppthreshold "Y")
+ (setf ppthreshold "Y" ppcomplete "N")
  (unless (and (string= ppcomplete "N") (string= pplimit "N") (string= pptrim "N")
  (string= ppcn "N") (string= ppdeletegroup "N") (string= ppdeleteprofile "N"))
  (terpri)
@@ -3843,7 +3843,7 @@
  ))
  ))
  ((string= parametertag "-plusminus")
- (setf ppthreshold "Y")
+ (setf ppthreshold "Y" ppcomplete "N")
  (unless (and (string= ppcomplete "N") (string= pplimit "N") (string= pptrim "N")
  (string= ppcn "N") (string= ppdeletegroup "N") (string= ppdeleteprofile "N"))
  (terpri)
@@ -3874,7 +3874,7 @@
  (SB-EXT:EXIT)
  ))))
  ((string= parametertag "-grouplimit")
- (setf ppdeletegroup "Y")
+ (setf ppdeletegroup "Y" ppcomplete "N")
  (unless (and (string= ppcomplete "N") (string= pplimit "N") (string= pptrim "N")
  (string= ppthreshold "N") (string= ppcn "N") (string= ppdeleteprofile "N"))
  (terpri)
@@ -3910,7 +3910,7 @@
  grouplimit
  )))
  ((string= parametertag "-profiles")
- (setf ppdeleteprofile "Y")
+ (setf ppdeleteprofile "Y" ppcomplete "N")
  (unless (and (string= ppcomplete "N") (string= pplimit "N") (string= pptrim "N")
  (string= ppthreshold "N") (string= ppdeletegroup "N") (string= ppcn "N"))
  (terpri)
