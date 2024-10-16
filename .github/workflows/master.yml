@@ -187,24 +187,24 @@ jobs:
       - name: Cache Quicklisp packages
         uses: actions/cache@v4
         with:
-          path: "%USERPROFILE%\\quicklisp\\"
+          path: "%%USERPROFILE%%\\quicklisp\\"
           key: ${{ runner.os }}-quicklisp-${{ hashFiles('**/*.asd', '**/*.lisp') }}
           restore-keys: |
             ${{ runner.os }}-quicklisp-
 
       - name: Move Lisp files to Quicklisp local-projects directory
         run: |
-          mkdir "%USERPROFILE%\\quicklisp\\local-projects"
-          copy src\\features.asd src\\features.lisp "%USERPROFILE%\\quicklisp\\local-projects\\"
-
+          mkdir "%%USERPROFILE%%\\quicklisp\\local-projects"
+          copy src\\features.asd src\\features.lisp "%%USERPROFILE%%\\quicklisp\\local-projects\\"
+          
       - name: Register local projects with Quicklisp
         run: |
-          sbcl --non-interactive --load "%USERPROFILE%"\\quicklisp\\setup.lisp --eval "(ql:register-local-projects)" --eval "(quit)"
+          sbcl --non-interactive --load "%%USERPROFILE%%"\\quicklisp\\setup.lisp --eval "(ql:register-local-projects)" --eval "(quit)"
 
       - name: Build and save the executable genppi 4g
         run: |
           sbcl --noinform --dynamic-space-size 4096 --control-stack-size 20 \
-            --load "%USERPROFILE%"\\quicklisp\\setup.lisp \
+            --load "%%USERPROFILE%%"\\quicklisp\\setup.lisp \
             --load src/genppi.lisp \
             --eval "(save-lisp-and-die \"binaries/genppi4g-Win.exe\" \
               :executable t :save-runtime-options t :toplevel 'main)"
@@ -212,7 +212,7 @@ jobs:
       - name: Build and save the executable genppi 8g
         run: |
           sbcl --noinform --dynamic-space-size 8192 --control-stack-size 20 \
-            --load "%USERPROFILE%"\\quicklisp\\setup.lisp \
+            --load "%%USERPROFILE%%"\\quicklisp\\setup.lisp \
             --load src/genppi.lisp \
             --eval "(save-lisp-and-die \"binaries/genppi8g-Win.exe\" \
               :executable t :save-runtime-options t :toplevel 'main)"
@@ -220,7 +220,7 @@ jobs:
       - name: Build and save the executable genppi 16g
         run: |
           sbcl --noinform --dynamic-space-size 16384 --control-stack-size 20 \
-            --load "%USERPROFILE%"\\quicklisp\\setup.lisp \
+            --load "%%USERPROFILE%%"\\quicklisp\\setup.lisp \
             --load src/genppi.lisp \
             --eval "(save-lisp-and-die \"binaries/genppi16g-Win.exe\" \
               :executable t :save-runtime-options t :toplevel 'main)"
@@ -228,7 +228,7 @@ jobs:
       - name: Build and save the executable genppi 32g
         run: |
           sbcl --noinform --dynamic-space-size 32768 --control-stack-size 20 \
-            --load "%USERPROFILE%"\\quicklisp\\setup.lisp \
+            --load "%%USERPROFILE%%"\\quicklisp\\setup.lisp \
             --load src/genppi.lisp \
             --eval "(save-lisp-and-die \"binaries/genppi32g-Win.exe\" \
               :executable t :save-runtime-options t :toplevel 'main)"
@@ -236,7 +236,7 @@ jobs:
       - name: Build and save the executable genppidb 4g
         run: |
           sbcl --noinform --dynamic-space-size 4096 --control-stack-size 20 \
-            --load "%USERPROFILE%"\\quicklisp\\setup.lisp \
+            --load "%%USERPROFILE%%"\\quicklisp\\setup.lisp \
             --load src/genppidb.lisp \
             --eval "(save-lisp-and-die \"binaries/genppidb4g-Win.exe\" \
               :executable t :save-runtime-options t :toplevel 'main)"
@@ -244,7 +244,7 @@ jobs:
       - name: Build and save the executable genppidb 8g
         run: |
           sbcl --noinform --dynamic-space-size 8192 --control-stack-size 20 \
-            --load "%USERPROFILE%"\\quicklisp\\setup.lisp \
+            --load "%%USERPROFILE%%"\\quicklisp\\setup.lisp \
             --load src/genppidb.lisp \
             --eval "(save-lisp-and-die \"binaries/genppidb8g-Win.exe\" \
               :executable t :save-runtime-options t :toplevel 'main)"
@@ -252,14 +252,14 @@ jobs:
       - name: Build and save the executable genppidb 16g
         run: |
           sbcl --noinform --dynamic-space-size 16384 --control-stack-size 20 \
-            --load "%USERPROFILE%"\\quicklisp\\setup.lisp \
+            --load "%%USERPROFILE%%"\\quicklisp\\setup.lisp \
             --load src/genppidb.lisp \
             --eval "(save-lisp-and-die \"binaries/genppidb16g-Win.exe\" \
               :executable t :save-runtime-options t :toplevel 'main)"
       - name: Build and save the executable genppidb 32g
         run: |
           sbcl --noinform --dynamic-space-size 32768 --control-stack-size 20 \
-            --load "%USERPROFILE%"\\quicklisp\\setup.lisp \
+            --load "%%USERPROFILE%%"\\quicklisp\\setup.lisp \
             --load src/genppidb.lisp \
             --eval "(save-lisp-and-die \"binaries/genppidb32g-Win.exe\" \
               :executable t :save-runtime-options t :toplevel 'main)"
