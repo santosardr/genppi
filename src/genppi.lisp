@@ -3147,7 +3147,7 @@
 ;------------------------------------------------------------------------------
 (defun version()
  (format t "GENPPI VERSION: 1.5~%")
- (format t "RELEASE NUMBER: 856e589ee01ddb89446b31319e8b17e07ea4f0ab~%") 
+ (format t "RELEASE NUMBER: 856e589ee01ddb89446b31319e8b17e07ea4f0ab~%")
  (format t "REPOSITORY: https://github.com/santosardr/genppi ~%")
  (format t "~%This version has substantial improvements compared to the version released at the paper's publication time, including: from 20 to 60 classification features. Using -ml: six-fold more proteins, and ninty-fold more interactions included in the final network for our five genomes of Buchnera aphidicola.~%To use -ml: download and extract the model.7z* files in the same running directory. The -ml is not the default to GENPPI~%~%")
  )
