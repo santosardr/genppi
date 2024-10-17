@@ -200,15 +200,15 @@ jobs:
         run: |
           sbcl --non-interactive --load "$env:USERPROFILE\\quicklisp\\setup.lisp" --eval "(ql:register-local-projects)" --eval "(quit)"
 
+
       - name: Build and save the executable genppi 4g
         run: |
-         powershell -Command {
-          sbcl --noinform --dynamic-space-size 4096 --control-stack-size 20 `
-            --load "$env:USERPROFILE\\quicklisp\\setup.lisp" `
-            --load src/genppi.lisp `
-            --eval "(save-lisp-and-die \"binaries\\genppi4g-Win.exe\" `
-              :executable t :save-runtime-options t :toplevel 'main)"
-         }
+          "`(load \"$env:USERPROFILE\\quicklisp\\setup.lisp\")`n" | Out-File -FilePath build.lisp -Encoding utf8
+          "`(load \"src/genppi.lisp\")`n" | Add-Content -Path build.lisp -Encoding utf8
+          "`(save-lisp-and-die \"binaries\\genppi4g-Win.exe\" :executable t :save-runtime-options t :toplevel 'main)`n" | Add-Content -Path build.lisp -Encoding utf8
+          "`(quit)`n" | Add-Content -Path build.lisp -Encoding utf8
+          sbcl --noinform --dynamic-space-size 4096 --control-stack-size 20 --load build.lisp
+
 
       - name: Build and save the executable genppi 8g
         run: |
