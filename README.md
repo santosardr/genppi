@@ -9,14 +9,13 @@ I have a hands-on youtube video explaining how to use it. Clique the below image
 
 Your main limitation is the amount of RAM in your machine/server. For instance, using a 
 conventional computer of 8 Gigabytes of RAM, the software can deal with at least
-50 genomes, each possessing on average 2200 proteins (*Corynebacterium*). However,
-this same machine cannot process 80 genomes with an average of five thousand 
+10 genomes, each possessing on average 2200 proteins. However,
+this same machine cannot process 50 genomes with an average of five thousand 
 proteins (*Escherichia coli*). To achieve this last task well done, we need to 
-compile GENPPI to use at least 8 Gigabytes of RAM and use the program version 
+compile GENPPI to use at least 32 Gigabytes of RAM or use the program version 
 capable of storing the bulk data on disk instead of memory, the GENPPIDB executable.
 For now, I had compiled all versions available in the binaries folder to use 
-different sizes of RAM. While I do not release the source code, if you need a 
-version compiled with more RAM, please get in touch with me.
+different sizes of RAM.
 
 SBCL includes the whole core of libraries for each executable, and it explains the size of the 
 software in megabytes. 
@@ -48,16 +47,26 @@ two or three thousand interactions (number of edges), and on average a few
 hundred (<200) interactions per protein. Some proteins can have thousands of 
 connections, but these should not be in a representative number.
 
+Starting from version 1.5, you can just call the program with the default parameters.
+For instance, considering all the fasta files of proteins, each representing one genome,
+are inside a target dir called 'mygenomes':
+
+```bash
+    genppi -dir  mygenomes/
+```
+
+
+
 (iii) A configuration that I use to frequently is this one:
 
 ```bash
     genppi -ppcomplete -expt fixed -w1 7 -cw1 4\
-    -ppdifftolerated 1  -pphistofilter -dir  summary/
+    -ppdifftolerated 1  -pphistofilter -dir  mygenomes/
 ```
 
 Meaning:
 
-- "-ppcomplete" is an excellent parameter to run at least once for each set of 
+- "-ppcomplete" (default) is an excellent parameter to run at least once for each set of 
 genomes. It does not restrict the number of interactions concerning  
 Phylogenetic Profile (PP); it just let it go. Depending on a small number of 
 genomes in your folder, the consequence is a massive and undesirable number of 
@@ -69,7 +78,7 @@ is created when we settle this parameter. If you decide to restrict the number
 of connections, do not use this parameter but limit the interactions. Optional 
 parameters to limit edges are -ppiterlimit, -trim, and -threshold, just citing 
 some of them. Check the -help options for a full list.
-- "-expt fixed" set the program for comparing neighbors genes at most "-w1" genes,
+- "-expt fixed" (default) set the program for comparing neighbors genes at most "-w1" genes,
 and using "-cw1" as the smaller number of genes for concluding a Conserved 
 Neighbourhood (CN). CN and PP are the primary methods to map significant 
 connections in an interaction network. The counterpart of "-expt fixed" is 
@@ -88,7 +97,7 @@ interaction network.
 multi-fasta files to be processed.
 
 ## Detailed command-line Example
-To test GENPPI, inside the GENPPI GitHub *test* folder, we provided subfolders containing two genomes: *Buchnera aphidicola* and *Corynebacterium pseudotuberculosis*. For *Buchenera* genomes, we have an instant test; It should execute speedily. The *Corynebacterium* genomes take a little bit longer to run. However, using the parameter "-expt fixed" for the conserved neighborhood algorithm,  we expect no more than one hour to finish the 50 genome analyzes.
+To test GENPPI, inside the GENPPI GitHub *test* folder, we provided subfolders containing two genomes: *Buchnera aphidicola* and *Corynebacterium pseudotuberculosis*. For *Buchenera* genomes, we have an instant test; It should execute speedily whitout the -ml parameter. The *Corynebacterium* genomes take a little bit longer to run.
 
 Let's through a step-by-step using the *Buchenera* genomes:
 
@@ -107,7 +116,7 @@ Let's through a step-by-step using the *Buchenera* genomes:
 ```
 Resulting in:
 ```text
-        assemblies/Ba_Ak.faa:625
+        assemblies/Ba_Ak.faa:559
         assemblies/Ba_Bp.faa:553
         assemblies/Ba_G002.faa:621
         assemblies/Ba_Sg.faa:620
@@ -142,18 +151,30 @@ Checking the numerical results:
 ```
 Resulting in:
 ```text
-          435 test1/ppi-files/Ba_Ak.sif
-           90 test1/ppi-files/Ba_Bp.sif
-          462 test1/ppi-files/Ba_G002.sif
-          243 test1/ppi-files/Ba_Sg.sif
-          350 test1/ppi-files/Ba_Ua.sif
+  8140 test1/ppi-files/Ba_Ak.sif
+  1792 test1/ppi-files/Ba_Bp.sif
+  9414 test1/ppi-files/Ba_G002.sif
+  5742 test1/ppi-files/Ba_Sg.sif
+  6286 test1/ppi-files/Ba_Ua.sif
 ```
-For standard GENPPI run (default parameters), the Ba_G002 has the more extensive interaction network with 462 edges comprising 126 proteins. Just looking for this output on the screen, we cannot know about the number of unique proteins. Please, hold on to that. Soon I will show you how.
+For standard GENPPI run (default parameters), the Ba_G002 has the more extensive interaction network with 9414 edges comprising 529 out 621 proteins. Just looking for this output on the screen, we cannot know about the number of unique proteins. However, using our countdots program, we can make such a count.
 
-5.2) I will relax the GENPPI parameters to obtain more interactions in the final networks. When looking for conserved phylogenetic profiles, I meant to do such a relaxing parameter telling the GENNPI algorithms to accept as similar proteins those with at least 50% of identity (-aadifflimit 0 -aacheckminlimit 18). Additionally, I will ask for a dynamic expansion in the conserved neighborhood algorithm; it will start with a minimum window size of four to infer conservation (-ws 4). If the algorithm is successful for an initial *ws*, it will expand the window size by four units for subsequent well-success expansions. Besides, I will ask GENPPI for not using any filter for phylogenetic profiles (-ppcomplete).  After all, this is our command:
 ```bash
-    genppi -aadifflimit 0 -aacheckminlimit 18 -expt dynamic -ws 4\
-    -ppcomplete -dir test2/
+    countdots test1/ppi-files/
+```
+Resulting in:
+```text
+File	Nodes	Edges
+Ba_Ak.dot	448	7917
+Ba_G002.dot	529	9166
+Ba_Ua.dot	450	6115
+Ba_Bp.dot	217	1746
+Ba_Sg.dot	430	5583
+```
+
+5.2) I will relax the GENPPI parameters to obtain more interactions in the final networks. When looking for conserved phylogenetic profiles, I meant to do such a relaxing parameter telling the GENNPI algorithms to accept as similar proteins those with at least 65% of identity (-ml). Additionally, I will ask for a dynamic expansion in the conserved neighborhood algorithm; it will start with a minimum window size of four to infer conservation (-ws 4). If the algorithm is successful for an initial *ws*, it will expand the window size by four units for subsequent well-success expansions. After all, this is our command:
+```bash
+    genppi -ml -expt dynamic -ws 4 -dir test2/
 ```
 Checking the numerical results:
 ```bash
@@ -161,19 +182,19 @@ Checking the numerical results:
 ```
 Resulting in:
 ```text
-    435  test1/ppi-files/Ba_Ak.sif
-    90   test1/ppi-files/Ba_Bp.sif
-    462  test1/ppi-files/Ba_G002.sif
-    243  test1/ppi-files/Ba_Sg.sif
-    350  test1/ppi-files/Ba_Ua.sif
-    1232 test2/ppi-files/Ba_Ak.sif
-    413  test2/ppi-files/Ba_Bp.sif
-    1263 test2/ppi-files/Ba_G002.sif
-    821  test2/ppi-files/Ba_Sg.sif
-    1002 test2/ppi-files/Ba_Ua.sif
+    8140 test1/ppi-files/Ba_Ak.sif
+    1792 test1/ppi-files/Ba_Bp.sif
+    9414 test1/ppi-files/Ba_G002.sif
+    5742 test1/ppi-files/Ba_Sg.sif
+    6286 test1/ppi-files/Ba_Ua.sif
+   89570 test2/ppi-files/Ba_Ak.sif
+   60897 test2/ppi-files/Ba_Bp.sif
+   87826 test2/ppi-files/Ba_G002.sif
+   86647 test2/ppi-files/Ba_Sg.sif
+   80808 test2/ppi-files/Ba_Ua.sif
 ```
 
-Our new interaction network for Ba_G002, compared to the one obtained with GENPPI default parameters, has 1263 edges comprising 172 proteins or a three-fold in the number of interactions and a 36% increase in the number of unique proteins.
+Our new interaction network for Ba_G002, compared to the one obtained with GENPPI default parameters, has 87826 edges comprising all 621 proteins or a nine-fold in the number of interactions.
 
 ## Exploring GENPPI results
 
