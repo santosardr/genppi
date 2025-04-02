@@ -119,7 +119,7 @@
 (defun predict (forest test-file negative-limit &optional classes)
   (let ( (TESTMATRIX) (ACCURACY) (CONFUSION) (FN) (FP) (SENSITIVITY)
 	 (SPECIFICITY) (TEST-DATA) (TN) (TP) (Y-PRED)
-	 (one) (two) )
+	 (one) (two) (precision) (f1-score) ) ; Added precision and f1-score here
 
   ;; Read the testing ARFF file
   (setf test-data (read-arff-file test-file ))
@@ -146,37 +146,44 @@
   ;; Compare the predicted labels with the actual labels and increment the confusion matrix accordingly
   (loop for i below (length y-pred) do
 	(if (< i negative-limit)
-	    (if (= (nth i y-pred) (position two classes) )
-		(incf (first (first confusion))) ; True Negative (NEGATIVE predicted correctly)
-	      (incf (second (first confusion)))) ; False Positive (POSITIVE predicted incorrectly)
-	  (if (= (nth i y-pred) (position one classes))
-	      (incf (second (second confusion))) ; True Positive (POSITIVE predicted correctly)
-	    (incf (first (second confusion)))))) ; False Negative (NEGATIVE predicted incorrectly)
+	    (if (= (nth i y-pred) (position two classes) ) ; Correctly predicted NEGATIVE (TN)
+		(incf (first (first confusion))) ; True Negative incremented
+	      (incf (second (first confusion)))) ; Incorrectly predicted POSITIVE (FP) -> FN in standard matrix view where rows are actual, cols are predicted. Let's re-verify the assignments below based on this logic.
+	  ;; Else: Actual is POSITIVE
+	  (if (= (nth i y-pred) (position one classes)) ; Correctly predicted POSITIVE (TP)
+	      (incf (second (second confusion))) ; True Positive incremented
+	    (incf (first (second confusion))))) ; Incorrectly predicted NEGATIVE (FN)
+        )
 
   ;; Extract the true positives (TP), false negatives (FN), true negatives (TN), and false positives (FP) from the confusion matrix
   (setf tp (second (second confusion))
-        fn (second (first confusion))
+        fn (first (second confusion))  ; Corrected FN assignment
         tn (first (first confusion))
-        fp (first (second confusion))
-	;; Calculate the sensitivity and specificity
-	sensitivity (if (= (+ tp fn) 0) 0 (/ tp (+ tp fn)))
+        fp (second (first confusion)) ; Corrected FP assignment
+	;; Calculate the sensitivity (Recall), specificity, precision, F1-score, and accuracy
+	sensitivity (if (= (+ tp fn) 0) 0 (/ tp (+ tp fn))) ; Recall
 	specificity (if (= (+ tn fp) 0) 0 (/ tn (+ tn fp)))
-	;; Calculate the accuracy
+    precision   (if (= (+ tp fp) 0) 0 (/ tp (+ tp fp))) ; Added Precision calculation
+    f1-score    (if (= (+ precision sensitivity) 0) 0    ; Added F1-Score calculation
+                    (/ (* 2 precision sensitivity) (+ precision sensitivity)))
 	accuracy (/ (+ tp tn) (+ tp tn fp fn)))
   ;; Print the confusion matrix
-  (format t "~%Confusion Matrix:~%")
-  (format t "  a~Cb~Cclassified as~%"  #\tab #\tab)
-  (format t " ~a~C~a~C a = NEGATIVE~%"   (first (first  confusion)) #\tab (second (first confusion )) #\tab)
-  (format t " ~a~C~a~C b = POSITIVE~%~%" (first (second confusion)) #\tab (second (second confusion)) #\tab)
+  (format t "~%Confusion Matrix (Rows: Actual, Cols: Predicted):~%")
+  (format t "           Pred Neg   Pred Pos ~%" )
+  (format t "Actual Neg     ~a              ~a~%"   tn fp)
+  (format t "Actual Pos     ~a              ~a~%~%" fn tp)
+
   ;; Print the variables involved for debugging
-  (format t "True Negatives:~C~a~%" #\tab tn)  
-  (format t "False Negatives:~C~a~%" #\tab fn)
-  (format t "True Positives:~C~a~%" #\tab tp)
-  (format t "False Positives:~C~a~%~%" #\tab fp)
-  ;; Print the sensitivity, specificity, and accuracy
+  (format t "True Negatives  (TN):~C~a~%" #\tab tn)  
+  (format t "False Negatives (FN):~C~a~%" #\tab fn)
+  (format t "True Positives  (TP):~C~a~%" #\tab tp)
+  (format t "False Positives (FP):~C~a~%~%" #\tab fp)
+  ;; Print the sensitivity, specificity, precision, F1-score, and accuracy
   (format t "Sensitivity: ~a~%" (float sensitivity))
   (format t "Specificity: ~a~%" (float specificity))
-  (format t "Accuracy: ~a~%" (float accuracy))
+  (format t "Precision:   ~a~%" (float precision)) ; Added Precision print
+  (format t "Accuracy:    ~a~%" (float accuracy))
+  (format t "F1-Score:    ~a~%" (float f1-score)) ; Added F1-Score print
   )
 )
 
@@ -200,11 +207,11 @@
 			  n-class
 			  datamatrix
 			  target
-			  :n-tree 500
-			  :bagging-ratio 1.0
-			  :max-depth (truncate (/ (+ 1 (length (getf train-data :attributes))) 2))
-			  :min-region-samples 1
-			  :n-trial 10))
+			  :n-tree 500			      
+			  :bagging-ratio 1.0		      
+			  :max-depth (truncate (/ (+ 1 (length (getf train-data :attributes))) 2)) 
+			  :min-region-samples 1		      
+			  :n-trial 10))			      
   (predict forest test-file negative-limit (getf train-data :classes))
   forest
   )
