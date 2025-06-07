@@ -399,14 +399,16 @@
 ;------------------------------------------------------------------------------
 ;Block of functions to write and read in the data bunch
 (defun save-db (filename ppi)
- (with-open-file (out filename
- :direction :output)
- (with-standard-io-syntax
- (print ppi out))))
+  (with-open-file (out filename
+                       :direction :output
+                       :if-exists :supersede     ; << Adiciona esta linha
+                       :if-does-not-exist :create) ; << Boa prática adicionar esta também
+    (with-standard-io-syntax
+      (print ppi out))))
 (defun load-db (filename)
  (with-open-file (in filename)
- (with-standard-io-syntax
- (return-from load-db (read in)))))
+   (with-standard-io-syntax
+     (return-from load-db (read in)))))      
 ;-------------------------------------------------------------------------------
 ;Function to load protein files and generate your histograms
 (declaim (ftype (function (cons ) ) histo-genomas))
@@ -2274,113 +2276,132 @@
  (format t "]~%")
  ))
 ;------------------------------------------------------------------------------
-;Function to predict PPI by gene fusion
-(defun rosetta-stone(aadifflimit checkpointminlimit percentage-rs)
  (defparameter *fusoes* (make-hash-table :test #'equalp))
  (defstruct fusion ppi rosetta-stone)
- (let ((fusoes (list))
- (gene-a)
- (gene-b)
- (fusao)
- (posicao-p)
- (qtd-genes)
- (ppi-fusoes (make-hash-table :test #'equalp))
- (laco 0)
- (genomenumber 0)
- )
- (declare (type fixnum aadifflimit))
- (declare (type fixnum checkpointminlimit))
- (declare (type single-float percentage-rs))
- (declare (type fixnum laco))
- (declare (type fixnum genomenumber))
- (format t "~%Predicting ppi by gene-fusion;~%")
- (format t "[05 10 15 20 25 30 35 40 45 50 55 60 65 70 75 80 85 90 95 100]%~%")
- (format *query-io* "[")
- (force-output *query-io*)
- (loop for g being the hash-keys in *genomas* using (hash-value proteins)
- do (progn
- (setf qtd-genes (length proteins))
- (dolist (p proteins)
- (setf posicao-p (position p proteins :test #'equalp))
- (cond
- ((< posicao-p (- qtd-genes 2))
- (progn
- (setf gene-a p)
- (setf gene-b (elt proteins (+ posicao-p 1)))
- (setf fusao (list "fusao" (mapcar #'+ (second gene-a) (second gene-b))))
- (setf fusoes (append fusoes (list (list fusao (list g (first gene-a) (first gene-b) posicao-p) (list)))))
- #|(setf gene-b (elt proteins (+ posicao-p 2)))
- (setf fusao (list "fusao" (mapcar #'+ (second gene-a) (second gene-b))))
- (setf fusoes (append fusoes (list (list fusao (list g (first gene-a) (first gene-b) posicao-p) (list)))))|#
- ));end condition 1 and action 1.
- ((= posicao-p (- qtd-genes 2))
- (progn
- (setf gene-a p)
- (setf gene-b (elt proteins (1+ posicao-p)))
- (setf fusao (list "fusao" (mapcar #'+ (second gene-a) (second gene-b))))
- (setf fusoes (append fusoes (list (list fusao (list g (first gene-a) (first gene-b) posicao-p) (list)))))
- #|(setf gene-b (elt proteins 0))
- (setf fusao (list "fusao" (mapcar #'+ (second gene-a) (second gene-b))))
- (setf fusoes (append fusoes (list (list fusao (list g (first gene-a) (first gene-b) posicao-p) (list)))))|#
- ));end condition 2 and action 2.
- #|((= posicao-p (- qtd-genes 1))
- (progn
- (setf gene-a p)
- (setf gene-b (elt proteins 0))
- (setf fusao (list "fusao" (mapcar #'+ (second gene-a) (second gene-b))))
- (setf fusoes (append fusoes (list (list fusao (list g (first gene-a) (first gene-b) posicao-p) (list)))))
- (setf gene-b (elt proteins 1))
- (setf fusao (list "fusao" (mapcar #'+ (second gene-a) (second gene-b))))
- (setf fusoes (append fusoes (list (list fusao (list g (first gene-a) (first gene-b) posicao-p) (list)))))
- ));condition end 3 and action 3.|#
- );cond
- (dolist (f fusoes)
- (unless (or (equalp (first p) (second (second f))) (equalp (first p) (third (second f))))
- (if (similar-test p (first f) aadifflimit checkpointminlimit)
- (progn
- (setf (third f) (append (third f) (list (list (first p) g))))
- );
- );if similar-test
- );unless
- );dolist mergers
- );dolist proteins
- (dotimes (j (ceiling (- (* 60 (/ (/ (* (1+ genomenumber) 100) (hash-table-count *genomas*)) 100)) laco)))
- (format *query-io* "=")
- (force-output *query-io*)
- )
- (setf laco (ceiling (+ laco (- (* 60 (/ (/ (* (1+ genomenumber) 100) (hash-table-count *genomas*)) 100)) laco))))
- (incf genomenumber)
- );progn
- );loop hash table *genomas*
- (dolist (f fusoes)
- (unless (eql (third f) nil)
- (setf *ppi-identified-gf* t)
- (setf (gethash (first (second f)) ppi-fusoes)
- (append (gethash (first (second f)) ppi-fusoes)
- (list
- (make-ppi-struct
- :genea (second (second f))
- :geneb (third (second f))
- :weight (* 1 percentage-rs)
- :position (fourth (second f))
- ));list
- );append
- );setf
- (setf (gethash (first (second f)) *fusoes*)
- (append
- (gethash (first (second f)) *fusoes*)
- (list (make-fusion :ppi (list (second (second f)) '-- (third (second f)))
- :rosetta-stone (third f)
- );make-fusion
- );list
- );append
- );setf mergers
- );unlles
- );dolist pangenome
- (format t "]~%")
- (return-from rosetta-stone ppi-fusoes)
- );let
- );defun
+
+(defun find-rosetta-for-protein (p p-genome-name all-fusions aadifflimit checkpointminlimit)
+  "Encontra todas as fusões que são similares a uma única proteína 'p'."
+  (let ((rosetta-stones nil))
+    (dolist (f all-fusions)
+      (let ((fusion-protein (first f))
+            (fusion-origin-info (second f)))
+        ;; Não comparar uma proteína com uma fusão originada no seu próprio genoma.
+        (unless (equalp p-genome-name (first fusion-origin-info))
+          (when (similar-test p fusion-protein aadifflimit checkpointminlimit)
+            ;; Retorna: [informação da fusão], [informação da origem da fusão], [informação da rosetta stone]
+            (push (list (first fusion-protein) fusion-origin-info (list (first p) p-genome-name)) rosetta-stones)))))
+    rosetta-stones))
+
+(defun rosetta-stone (workingdir aadifflimit checkpointminlimit percentage-rs)
+  (clrhash *fusoes*) ; Limpa a hash global. *fusoes* será usada apenas para o relatório final.
+  (let ((all-fusions nil)
+        (ppi-fusoes-db-path (concatenate 'string workingdir "/database/ppi-gene-fusion/"))
+        (fusoes-report-db-path (concatenate 'string workingdir "/database/gene-fusion-report/"))
+        (laco 0)
+        (genomenumber 0))
+    (declare (type fixnum aadifflimit checkpointminlimit laco genomenumber))
+    (declare (type single-float percentage-rs))
+
+    ;; Garante que os diretórios do banco de dados existam e estejam limpos
+    (ensure-directories-exist ppi-fusoes-db-path)
+    (mapc #'delete-file (list-directory ppi-fusoes-db-path))
+    (ensure-directories-exist fusoes-report-db-path)
+    (mapc #'delete-file (list-directory fusoes-report-db-path))
+
+    ;; FASE 1: Geração serial de todas as fusões candidatas
+    (format t "~%Step 1/2: Generating all candidate gene fusions;~%")
+    (loop for g being the hash-keys in *genomas* using (hash-value proteins)
+          do (let ((qtd-genes (length proteins)))
+               (loop for i from 0 below qtd-genes
+                     for gene-a = (elt proteins i)
+                     for gene-b = (elt proteins (mod (1+ i) qtd-genes))
+                     for fusao = (list "fusao" (mapcar #'+ (second gene-a) (second gene-b)))
+                     do (push (list fusao (list g (first gene-a) (first gene-b) i)) all-fusions))))
+    (setf all-fusions (nreverse all-fusions))
+    (format t "Found ~a candidate fusions.~%" (length all-fusions))
+    
+    ;; FASE 2: Iterar sobre os genomas para prever PPIs e salvar em disco
+    (format t "~%Step 2/2: Predicting ppi by gene-fusion;~%")
+    (format t "[05 10 15 20 25 30 35 40 45 50 55 60 65 70 75 80 85 90 95 100]%~%")
+    (format *query-io* "[")
+    (force-output *query-io*)
+
+    ;; LOOP SERIAL PRINCIPAL (controla a barra de progresso)
+    (loop for g being the hash-keys in *genomas* using (hash-value proteins)
+          do (progn
+               (let* ((ppi-results-for-g nil)
+                      (report-results-for-g nil)
+                      ;; Processamento paralelo das proteínas deste genoma
+                      (results (lparallel:pmap 'list
+                                               #'(lambda (p)
+                                                   (find-rosetta-for-protein p g all-fusions aadifflimit checkpointminlimit))
+                                               proteins)))
+                 
+                 ;; Processar os resultados coletados para este genoma
+                 (dolist (found-fusions (remove-if #'null results))
+                   (dolist (f found-fusions)
+                     (let* ((fusion-origin-info (second f))
+                            (origin-genome (first fusion-origin-info))
+                            (genea (second fusion-origin-info))
+                            (geneb (third fusion-origin-info))
+                            (position (fourth fusion-origin-info))
+                            (rosetta-stone-info (third f)))
+
+                       (setf *ppi-identified-gf* t)
+
+                       ;; Acumula PPIs para o genoma de ORIGEM da fusão
+                       (push (make-ppi-struct :genea genea
+                                              :geneb geneb
+                                              :weight (* 1.0 percentage-rs)
+                                              :position position)
+                             (getf ppi-results-for-g origin-genome))
+
+                       ;; Acumula dados de relatório para o genoma de ORIGEM da fusão
+                       (push (make-fusion :ppi (list genea '-- geneb)
+                                          :rosetta-stone (list rosetta-stone-info))
+                             (getf report-results-for-g origin-genome)))))
+                 
+                 ;; Agora, salve os resultados acumulados no disco
+                 ;; Salvando PPIs
+                 (loop for (genome ppi-list) on ppi-results-for-g by #'cddr
+                       do (let ((db-file (concatenate 'string ppi-fusoes-db-path genome ".db")))
+                            ;; Carrega dados existentes, adiciona novos e salva de volta
+                            (let ((existing-data (if (probe-file db-file) (load-db db-file) nil)))
+                              (save-db db-file (append ppi-list existing-data)))))
+                 
+                 ;; Salvando Relatórios
+                 (loop for (genome report-list) on report-results-for-g by #'cddr
+                       do (let ((db-file (concatenate 'string fusoes-report-db-path genome ".db")))
+                            (let ((existing-data (if (probe-file db-file) (load-db db-file) nil)))
+                              (save-db db-file (append report-list existing-data)))))
+                 )
+
+               ;; SUA LÓGICA DE BARRA DE PROGRESSO (inalterada)
+               (dotimes (j (ceiling (- (* 60 (/ (/ (* (1+ genomenumber) 100) (hash-table-count *genomas*)) 100)) laco)))
+                 (format *query-io* "=")
+                 (force-output *query-io*))
+               (setf laco (ceiling (+ laco (- (* 60 (/ (/ (* (1+ genomenumber) 100) (hash-table-count *genomas*)) 100)) laco))))
+               (incf genomenumber)
+               );progn
+          );loop
+
+    (format t "]~%")
+    
+    ;; A função não precisa mais retornar uma tabela hash, pois os dados estão no disco.
+    ;; Mas podemos carregar os dados do relatório para a variável global *fusoes* para consistência.
+    (dolist (report-file (list-directory fusoes-report-db-path))
+      (let ((genome-name (pathname-name report-file)))
+        (setf (gethash genome-name *fusoes*) (load-db report-file))))
+
+    ;; A função principal espera um retorno de ppi-gene-fusion. Para manter a compatibilidade,
+    ;; podemos carregar a ppi do disco em uma hash-table e retorná-la.
+    (let ((final-ppi-hash (make-hash-table :test #'equalp)))
+        (dolist (ppi-file (list-directory ppi-fusoes-db-path))
+            (let ((genome-name (pathname-name ppi-file)))
+                (setf (gethash genome-name final-ppi-hash) (load-db ppi-file))))
+        final-ppi-hash)))
+
+;Function to predict PPI by gene fusion
 ;-------------------------------------------------------------------------------
 ;Reports
 (defun relatorio-perfil-filogenetico (workingdir caminho percentage-pp ppdifftolerated pphistofilter
@@ -3061,7 +3082,7 @@
  );if
  );unless
  (if (string= gene-fusion "Y")
- (setf ppi-gene-fusion (rosetta-stone aadifflimit aacheckminlimit percentage-gf))
+ (setf ppi-gene-fusion (rosetta-stone  workingdir aadifflimit aacheckminlimit percentage-gf))
  )
 ;After turning the stored gene neighborhood function, the pangenome is
 ;from memory and writes it to the database.
@@ -3191,7 +3212,7 @@
  (phylogenetic-profiles-delete-perfil percentage-pp ppdifftolerated profiles workingdir)
  );End Condition and Action 7
  );cond
- (lparallel:end-kernel)
+
 ;Taking unnecessary data out of memory from now on
  (setf *perfil-filogenetico* nil)
 ;If PPI was found for one of the features
@@ -3439,6 +3460,7 @@
  (format t "~%Gene-neighborhood-conservation-report path: ~a" (concatenate 'string workingdir "gene-neighborhood-conservation-report/" "report.txt"))
  (format t "~%Gene-neighborhood-conservation-report path: ~a" (concatenate 'string workingdir "/gene-neighborhood-conservation-report/" "report.txt"))
  ));unless
+ (lparallel:end-kernel)
  );let genPPI
  );defun genPPI
 ;------------------------------------------------------------------------------
