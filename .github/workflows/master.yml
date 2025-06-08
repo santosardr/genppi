@@ -287,7 +287,7 @@ jobs:
           sbcl --noinform --dynamic-space-size 4096 --control-stack-size 20 \
             --load ~/quicklisp/setup.lisp \
             --load src/genppi.lisp \
-            --eval "(save-lisp-and-die \"binaries/genppi4g-Linux.x\" \
+            --eval "(save-lisp-and-die \"binaries/genppi4g-Linux\" \
               :executable t :save-runtime-options t :toplevel 'main)"
 
       - name: Build and save the executable genppi 8g
@@ -295,7 +295,7 @@ jobs:
           sbcl --noinform --dynamic-space-size 8192 --control-stack-size 20 \
             --load ~/quicklisp/setup.lisp \
             --load src/genppi.lisp \
-            --eval "(save-lisp-and-die \"binaries/genppi8g-Linux.x\" \
+            --eval "(save-lisp-and-die \"binaries/genppi8g-Linux\" \
               :executable t :save-runtime-options t :toplevel 'main)"
 
       - name: Build and save the executable genppi 16g
@@ -303,7 +303,7 @@ jobs:
           sbcl --noinform --dynamic-space-size 16384 --control-stack-size 20 \
             --load ~/quicklisp/setup.lisp \
             --load src/genppi.lisp \
-            --eval "(save-lisp-and-die \"binaries/genppi16g-Linux.x\" \
+            --eval "(save-lisp-and-die \"binaries/genppi16g-Linux\" \
               :executable t :save-runtime-options t :toplevel 'main)"
 
       - name: Build and save the executable genppi 32g
@@ -311,7 +311,7 @@ jobs:
           sbcl --noinform --dynamic-space-size 32768 --control-stack-size 20 \
             --load ~/quicklisp/setup.lisp \
             --load src/genppi.lisp \
-            --eval "(save-lisp-and-die \"binaries/genppi32g-Linux.x\" \
+            --eval "(save-lisp-and-die \"binaries/genppi32g-Linux\" \
               :executable t :save-runtime-options t :toplevel 'main)"
 
       - name: Build and save the executable genppidb 4g
@@ -319,7 +319,7 @@ jobs:
           sbcl --noinform --dynamic-space-size 4096 --control-stack-size 20 \
             --load ~/quicklisp/setup.lisp \
             --load src/genppidb.lisp \
-            --eval "(save-lisp-and-die \"binaries/genppidb4g-Linux.x\" \
+            --eval "(save-lisp-and-die \"binaries/genppidb4g-Linux\" \
               :executable t :save-runtime-options t :toplevel 'main)"
 
       - name: Build and save the executable genppidb 8g
@@ -327,7 +327,7 @@ jobs:
           sbcl --noinform --dynamic-space-size 8192 --control-stack-size 20 \
             --load ~/quicklisp/setup.lisp \
             --load src/genppidb.lisp \
-            --eval "(save-lisp-and-die \"binaries/genppidb8g-Linux.x\" \
+            --eval "(save-lisp-and-die \"binaries/genppidb8g-Linux\" \
               :executable t :save-runtime-options t :toplevel 'main)"
 
       - name: Build and save the executable genppidb 16g
@@ -335,7 +335,7 @@ jobs:
           sbcl --noinform --dynamic-space-size 16384 --control-stack-size 20 \
             --load ~/quicklisp/setup.lisp \
             --load src/genppidb.lisp \
-            --eval "(save-lisp-and-die \"binaries/genppidb16g-Linux.x\" \
+            --eval "(save-lisp-and-die \"binaries/genppidb16g-Linux\" \
               :executable t :save-runtime-options t :toplevel 'main)"
 
       - name: Build and save the executable genppidb 32g
@@ -343,7 +343,7 @@ jobs:
           sbcl --noinform --dynamic-space-size 32768 --control-stack-size 20 \
             --load ~/quicklisp/setup.lisp \
             --load src/genppidb.lisp \
-            --eval "(save-lisp-and-die \"binaries/genppidb32g-Linux.x\" \
+            --eval "(save-lisp-and-die \"binaries/genppidb32g-Linux\" \
               :executable t :save-runtime-options t :toplevel 'main)"
 
       # --- CORREÇÃO: Faz o upload APENAS dos executáveis do Linux que acabaram de ser compilados ---
@@ -352,7 +352,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: genppi-linux-binaries
-          path: binaries/genppi*-Linux.x
+          path: binaries/genppi*-Linux
 
   gather-artifacts:
     needs: [mac-build, windows-build, linux-build]
