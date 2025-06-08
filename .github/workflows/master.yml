@@ -186,70 +186,86 @@ jobs:
 
       - name: Install SBCL
         run: choco install sbcl
+        # É necessário adicionar o SBCL ao PATH manualmente após a instalação com choco
+      - name: Add SBCL to PATH
+        run: echo "C:\Program Files\Steel Bank Common Lisp\2.4.4" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
 
       - name: Setup Quicklisp
+        shell: powershell
         run: |
           Invoke-WebRequest -Uri https://beta.quicklisp.org/quicklisp.lisp -OutFile quicklisp.lisp
-          sbcl --non-interactive --load quicklisp.lisp --eval "(quicklisp-quickstart:install)"
+          sbcl --non-interactive --load quicklisp.lisp --eval "(quicklisp-quickstart:install :path \"$env:USERPROFILE\\quicklisp\\\")" --eval "(ql:add-to-init-file)" --eval "(quit)"
 
       - name: Cache Quicklisp packages
         uses: actions/cache@v4
         with:
-          path: $env:USERPROFILE\quicklisp\
+          path: ${{ env.USERPROFILE }}\quicklisp\
           key: ${{ runner.os }}-quicklisp-${{ hashFiles('**/*.asd', '**/*.lisp') }}
           restore-keys: |
             ${{ runner.os }}-quicklisp-
 
       - name: Move Lisp files to Quicklisp local-projects directory
+        shell: powershell
         run: |
-          New-Item -ItemType Directory -Force -Path $env:USERPROFILE\quicklisp\local-projects
-          Copy-Item src\features.asd,src\features.lisp -Destination $env:USERPROFILE\quicklisp\local-projects
+          $localProjectsPath = Join-Path $env:USERPROFILE "quicklisp\local-projects"
+          New-Item -ItemType Directory -Force -Path $localProjectsPath
+          Copy-Item src\features.asd,src\features.lisp -Destination $localProjectsPath
 
       - name: Register local projects with Quicklisp
+        shell: powershell
         run: |
-          sbcl --non-interactive --load "$env:USERPROFILE\quicklisp\setup.lisp" --eval "(ql:register-local-projects)" --eval "(quit)"
+          sbcl --non-interactive --load (Join-Path $env:USERPROFILE "quicklisp\setup.lisp") --eval "(ql:register-local-projects)" --eval "(quit)"
 
       - name: Clean binaries directory
+        shell: powershell
         run: |
           if (Test-Path binaries) { Remove-Item -Recurse -Force binaries }
           New-Item -ItemType Directory -Force -Path binaries
 
-      - name: Build and save all executables
+      - name: Generate and run build script
+        shell: powershell
         run: |
-          sbcl --noinform --dynamic-space-size 4096 --control-stack-size 20 `
-            --load "$env:USERPROFILE\quicklisp\setup.lisp" `
-            --load src/genppi.lisp `
-            --eval "(save-lisp-and-die \"binaries/genppi4g-Win.exe\" :executable t :save-runtime-options t :toplevel 'main)"
-          sbcl --noinform --dynamic-space-size 8192 --control-stack-size 20 `
-            --load "$env:USERPROFILE\quicklisp\setup.lisp" `
-            --load src/genppi.lisp `
-            --eval "(save-lisp-and-die \"binaries/genppi8g-Win.exe\" :executable t :save-runtime-options t :toplevel 'main)"
-          sbcl --noinform --dynamic-space-size 16384 --control-stack-size 20 `
-            --load "$env:USERPROFILE\quicklisp\setup.lisp" `
-            --load src/genppi.lisp `
-            --eval "(save-lisp-and-die \"binaries/genppi16g-Win.exe\" :executable t :save-runtime-options t :toplevel 'main)"
-          sbcl --noinform --dynamic-space-size 32768 --control-stack-size 20 `
-            --load "$env:USERPROFILE\quicklisp\setup.lisp" `
-            --load src/genppi.lisp `
-            --eval "(save-lisp-and-die \"binaries/genppi32g-Win.exe\" :executable t :save-runtime-options t :toplevel 'main)"
-          sbcl --noinform --dynamic-space-size 4096 --control-stack-size 20 `
-            --load "$env:USERPROFILE\quicklisp\setup.lisp" `
-            --load src/genppidb.lisp `
-            --eval "(save-lisp-and-die \"binaries/genppidb4g-Win.exe\" :executable t :save-runtime-options t :toplevel 'main)"
-          sbcl --noinform --dynamic-space-size 8192 --control-stack-size 20 `
-            --load "$env:USERPROFILE\quicklisp\setup.lisp" `
-            --load src/genppidb.lisp `
-            --eval "(save-lisp-and-die \"binaries/genppidb8g-Win.exe\" :executable t :save-runtime-options t :toplevel 'main)"
-          sbcl --noinform --dynamic-space-size 16384 --control-stack-size 20 `
-            --load "$env:USERPROFILE\quicklisp\setup.lisp" `
-            --load src/genppidb.lisp `
-            --eval "(save-lisp-and-die \"binaries/genppidb16g-Win.exe\" :executable t :save-runtime-options t :toplevel 'main)"
-          sbcl --noinform --dynamic-space-size 32768 --control-stack-size 20 `
-            --load "$env:USERPROFILE\quicklisp\setup.lisp" `
-            --load src/genppidb.lisp `
-            --eval "(save-lisp-and-die \"binaries/genppidb32g-Win.exe\" :executable t :save-runtime-options t :toplevel 'main)"
+          # Gera um script PowerShell (build.ps1) com todos os comandos de compilação.
+          # Usar aspas simples (') em --eval garante que o PowerShell não interprete o conteúdo,
+          # passando a string exata para o Lisp, que é o que resolve o problema de escape.
+          @"
+          Write-Host "Iniciando a compilação dos executáveis para Windows..."
+          $ql_setup = Join-Path \$env:USERPROFILE "quicklisp\setup.lisp"
+
+          # --- Compilando genppi ---
+          Write-Host "Compilando genppi4g-Win.exe..."
+          sbcl --noinform --dynamic-space-size 4096 --control-stack-size 20 --load "\$ql_setup" --load "src/genppi.lisp" --eval '(sb-ext:save-lisp-and-die "binaries/genppi4g-Win.exe" :executable t :toplevel #'main)'
+          
+          Write-Host "Compilando genppi8g-Win.exe..."
+          sbcl --noinform --dynamic-space-size 8192 --control-stack-size 20 --load "\$ql_setup" --load "src/genppi.lisp" --eval '(sb-ext:save-lisp-and-die "binaries/genppi8g-Win.exe" :executable t :toplevel #'main)'
+          
+          Write-Host "Compilando genppi16g-Win.exe..."
+          sbcl --noinform --dynamic-space-size 16384 --control-stack-size 20 --load "\$ql_setup" --load "src/genppi.lisp" --eval '(sb-ext:save-lisp-and-die "binaries/genppi16g-Win.exe" :executable t :toplevel #'main)'
+          
+          Write-Host "Compilando genppi32g-Win.exe..."
+          sbcl --noinform --dynamic-space-size 32768 --control-stack-size 20 --load "\$ql_setup" --load "src/genppi.lisp" --eval '(sb-ext:save-lisp-and-die "binaries/genppi32g-Win.exe" :executable t :toplevel #'main)'
+
+          # --- Compilando genppidb ---
+          Write-Host "Compilando genppidb4g-Win.exe..."
+          sbcl --noinform --dynamic-space-size 4096 --control-stack-size 20 --load "\$ql_setup" --load "src/genppidb.lisp" --eval '(sb-ext:save-lisp-and-die "binaries/genppidb4g-Win.exe" :executable t :toplevel #'main)'
+          
+          Write-Host "Compilando genppidb8g-Win.exe..."
+          sbcl --noinform --dynamic-space-size 8192 --control-stack-size 20 --load "\$ql_setup" --load "src/genppidb.lisp" --eval '(sb-ext:save-lisp-and-die "binaries/genppidb8g-Win.exe" :executable t :toplevel #'main)'
+          
+          Write-Host "Compilando genppidb16g-Win.exe..."
+          sbcl --noinform --dynamic-space-size 16384 --control-stack-size 20 --load "\$ql_setup" --load "src/genppidb.lisp" --eval '(sb-ext:save-lisp-and-die "binaries/genppidb16g-Win.exe" :executable t :toplevel #'main)'
+          
+          Write-Host "Compilando genppidb32g-Win.exe..."
+          sbcl --noinform --dynamic-space-size 32768 --control-stack-size 20 --load "\$ql_setup" --load "src/genppidb.lisp" --eval '(sb-ext:save-lisp-and-die "binaries/genppidb32g-Win.exe" :executable t :toplevel #'main)'
+
+          Write-Host "Compilação concluída."
+          "@ | Set-Content -Path "build.ps1" -Encoding utf8
+
+          # Executa o script que acabamos de criar
+          ./build.ps1
 
       - name: Archive Windows binaries
+        shell: powershell
         run: |
           Compress-Archive -Path binaries\* -DestinationPath genppi-win-binaries.zip
 
