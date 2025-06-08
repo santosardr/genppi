@@ -11,9 +11,10 @@ on:
 
 jobs:
   mac-build:
-    if: contains(github.event.head_commit.message, 'COMPILEMAC')
+    if: contains(github.event.head_commit.message, 'COMPILEMAC') || contains(github.event.head_commit.message, 'COMPILEALL')
     runs-on: macos-latest
-
+    outputs:
+      mac_artifact: ${{ steps.mac_upload.outputs.artifact-name }}
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -37,7 +38,7 @@ jobs:
 
       - name: Move Lisp files to Quicklisp local-projects directory
         run: |
-          mkdir -p ~/quicklisp/local-projects/ &&
+          mkdir -p ~/quicklisp/local-projects/
           cp src/features.asd src/features.lisp ~/quicklisp/local-projects/
 
       - name: Register local projects with Quicklisp
@@ -111,67 +112,23 @@ jobs:
             --eval "(save-lisp-and-die \"binaries/genppidb32g-Mac.x\" \
               :executable t :save-runtime-options t :toplevel 'main)"
 
-      - name: Test the executable 8g
+      - name: Create zip archive of all macOS binaries
         run: |
-          if [ -f binaries/genppi8g-Mac.x ]; then
-            chmod +x binaries/genppi8g-Mac.x
-            binaries/genppi8g-Mac.x -dir test/Buchnera_aphidicola/refer
-          else
-            echo "Executable does not exist."
-            exit 1
-          fi
+          cd binaries
+          zip -r ../genppi-mac-binaries.zip *.x
 
-      - name: Upload the macOS executable 4g as an artifact
+      - name: Upload the macOS zip artifact
+        id: mac_upload
         uses: actions/upload-artifact@v4
         with:
-          name: genppi4g-Mac
-          path: binaries/genppi4g-Mac.x
+          name: genppi-mac-binaries
+          path: genppi-mac-binaries.zip
 
-      - name: Upload the macOS executable 8g as an artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: genppi8g-Mac
-          path: binaries/genppi8g-Mac.x
-
-      - name: Upload the macOS executable 16g as an artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: genppi16g-Mac
-          path: binaries/genppi16g-Mac.x
-
-      - name: Upload the macOS executable 32g as an artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: genppi32g-Mac
-          path: binaries/genppi32g-Mac.x
-
-      - name: Upload the macOS executable db4g as an artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: genppidb4g-Mac
-          path: binaries/genppidb4g-Mac.x
-
-      - name: Upload the macOS executable db8g as an artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: genppidb8g-Mac
-          path: binaries/genppidb8g-Mac.x
-
-      - name: Upload the macOS executable db16g as an artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: genppidb16g-Mac
-          path: binaries/genppidb16g-Mac.x
-
-      - name: Upload the macOS executable db32g as an artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: genppidb32g-Mac
-          path: binaries/genppidb32g-Mac.x
   windows-build:
-    if: contains(github.event.head_commit.message, 'COMPILEWIN')
+    if: contains(github.event.head_commit.message, 'COMPILEWIN') || contains(github.event.head_commit.message, 'COMPILEALL')
     runs-on: windows-latest
-
+    outputs:
+      win_artifact: ${{ steps.win_upload.outputs.artifact-name }}
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -205,7 +162,7 @@ jobs:
           sbcl --noinform --dynamic-space-size 4096 --control-stack-size 20 `
             --load "$env:USERPROFILE\\quicklisp\\setup.lisp" `
             --load src/genppi.lisp `
-            --eval "(save-lisp-and-die \\"binaries/genppi4g-Win.exe\\" :executable t :save-runtime-options t :toplevel 'main)"
+            --eval "(save-lisp-and-die \"binaries/genppi4g-Win.exe\" :executable t :save-runtime-options t :toplevel 'main)"
 
       - name: Build and save the executable genppi 8g
         run: |
@@ -248,10 +205,162 @@ jobs:
             --load "$env:USERPROFILE\\quicklisp\\setup.lisp" `
             --load src/genppidb.lisp `
             --eval "(save-lisp-and-die \"binaries/genppidb16g-Win.exe\" :executable t :save-runtime-options t :toplevel 'main)"
-            
+
       - name: Build and save the executable genppidb 32g
         run: |
           sbcl --noinform --dynamic-space-size 32768 --control-stack-size 20 `
             --load "$env:USERPROFILE\\quicklisp\\setup.lisp" `
             --load src/genppidb.lisp `
             --eval "(save-lisp-and-die \"binaries/genppidb32g-Win.exe\" :executable t :save-runtime-options t :toplevel 'main)"
+
+      - name: Create zip archive of all Windows binaries
+        run: |
+          powershell Compress-Archive -Path binaries\*.exe -DestinationPath genppi-win-binaries.zip
+
+      - name: Upload the Windows zip artifact
+        id: win_upload
+        uses: actions/upload-artifact@v4
+        with:
+          name: genppi-win-binaries
+          path: genppi-win-binaries.zip
+
+  linux-build:
+    if: contains(github.event.head_commit.message, 'COMPILELINUX') || contains(github.event.head_commit.message, 'COMPILEALL')
+    runs-on: ubuntu-latest
+    outputs:
+      linux_artifact: ${{ steps.linux_upload.outputs.artifact-name }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install SBCL
+        run: sudo apt-get update && sudo apt-get install -y sbcl curl zip
+
+      - name: Setup Quicklisp
+        run: |
+          curl -O https://beta.quicklisp.org/quicklisp.lisp
+          sbcl --non-interactive --load quicklisp.lisp \
+            --eval '(quicklisp-quickstart:install)'
+
+      - name: Cache Quicklisp packages
+        uses: actions/cache@v4
+        with:
+          path: ~/quicklisp/
+          key: ${{ runner.os }}-quicklisp-${{ hashFiles('**/*.asd', '**/*.lisp') }}
+          restore-keys: |
+            ${{ runner.os }}-quicklisp-
+
+      - name: Move Lisp files to Quicklisp local-projects directory
+        run: |
+          mkdir -p ~/quicklisp/local-projects/
+          cp src/features.asd src/features.lisp ~/quicklisp/local-projects/
+
+      - name: Register local projects with Quicklisp
+        run: |
+          sbcl --non-interactive \
+            --load ~/quicklisp/setup.lisp \
+            --eval '(ql:register-local-projects)' \
+            --eval '(quit)'
+
+      - name: Build and save the executable genppi 4g
+        run: |
+          sbcl --noinform --dynamic-space-size 4096 --control-stack-size 20 \
+            --load ~/quicklisp/setup.lisp \
+            --load src/genppi.lisp \
+            --eval "(save-lisp-and-die \"binaries/genppi4g-Linux.x\" \
+              :executable t :save-runtime-options t :toplevel 'main)"
+
+      - name: Build and save the executable genppi 8g
+        run: |
+          sbcl --noinform --dynamic-space-size 8192 --control-stack-size 20 \
+            --load ~/quicklisp/setup.lisp \
+            --load src/genppi.lisp \
+            --eval "(save-lisp-and-die \"binaries/genppi8g-Linux.x\" \
+              :executable t :save-runtime-options t :toplevel 'main)"
+
+      - name: Build and save the executable genppi 16g
+        run: |
+          sbcl --noinform --dynamic-space-size 16384 --control-stack-size 20 \
+            --load ~/quicklisp/setup.lisp \
+            --load src/genppi.lisp \
+            --eval "(save-lisp-and-die \"binaries/genppi16g-Linux.x\" \
+              :executable t :save-runtime-options t :toplevel 'main)"
+
+      - name: Build and save the executable genppi 32g
+        run: |
+          sbcl --noinform --dynamic-space-size 32768 --control-stack-size 20 \
+            --load ~/quicklisp/setup.lisp \
+            --load src/genppi.lisp \
+            --eval "(save-lisp-and-die \"binaries/genppi32g-Linux.x\" \
+              :executable t :save-runtime-options t :toplevel 'main)"
+
+      - name: Build and save the executable genppidb 4g
+        run: |
+          sbcl --noinform --dynamic-space-size 4096 --control-stack-size 20 \
+            --load ~/quicklisp/setup.lisp \
+            --load src/genppidb.lisp \
+            --eval "(save-lisp-and-die \"binaries/genppidb4g-Linux.x\" \
+              :executable t :save-runtime-options t :toplevel 'main)"
+
+      - name: Build and save the executable genppidb 8g
+        run: |
+          sbcl --noinform --dynamic-space-size 8192 --control-stack-size 20 \
+            --load ~/quicklisp/setup.lisp \
+            --load src/genppidb.lisp \
+            --eval "(save-lisp-and-die \"binaries/genppidb8g-Linux.x\" \
+              :executable t :save-runtime-options t :toplevel 'main)"
+
+      - name: Build and save the executable genppidb 16g
+        run: |
+          sbcl --noinform --dynamic-space-size 16384 --control-stack-size 20 \
+            --load ~/quicklisp/setup.lisp \
+            --load src/genppidb.lisp \
+            --eval "(save-lisp-and-die \"binaries/genppidb16g-Linux.x\" \
+              :executable t :save-runtime-options t :toplevel 'main)"
+
+      - name: Build and save the executable genppidb 32g
+        run: |
+          sbcl --noinform --dynamic-space-size 32768 --control-stack-size 20 \
+            --load ~/quicklisp/setup.lisp \
+            --load src/genppidb.lisp \
+            --eval "(save-lisp-and-die \"binaries/genppidb32g-Linux.x\" \
+              :executable t :save-runtime-options t :toplevel 'main)"
+
+      - name: Create zip archive of all Linux binaries
+        run: |
+          cd binaries
+          zip -r ../genppi-linux-binaries.zip *.x
+
+      - name: Upload the Linux zip artifact
+        id: linux_upload
+        uses: actions/upload-artifact@v4
+        with:
+          name: genppi-linux-binaries
+          path: genppi-linux-binaries.zip
+
+  gather-artifacts:
+    needs: [mac-build, windows-build, linux-build]
+    if: |
+      always() &&
+      (
+        contains(github.event.head_commit.message, 'COMPILEALL') ||
+        contains(github.event.head_commit.message, 'COMPILEMAC') ||
+        contains(github.event.head_commit.message, 'COMPILEWIN') ||
+        contains(github.event.head_commit.message, 'COMPILELINUX')
+      )
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download all platform artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: all-genppi-binaries
+
+      - name: Create single zip archive
+        run: |
+          cd all-genppi-binaries
+          zip -r ../all-genppi-binaries.zip .
+      - name: Upload single zip artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: all-genppi-binaries
+          path: all-genppi-binaries.zip
