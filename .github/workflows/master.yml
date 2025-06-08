@@ -313,19 +313,30 @@ jobs:
         with:
           path: all-binaries
 
-      # --- PASSO ADICIONADO AQUI ---
-      - name: Remove artifact metadata files
+      # --- ALTERAÇÃO PRINCIPAL AQUI ---
+      - name: Organize binaries into platform-specific folders
         run: |
-          # Encontra e remove todos os arquivos README.md dentro do diretório de binários
-          find all-binaries/ -name "README.md" -type f -delete
-      
-      - name: Create single zip archive
-        run: |
-          # O comando zip agora funcionará sem conflitos de nome.
-          # Usamos -j para achatar a estrutura e colocar todos os binários na raiz do zip.
+          # Navega para o diretório onde os artefatos foram baixados
           cd all-binaries
-          zip -j ../all-genppi-binaries.zip ./*/*
-      
+          
+          # Renomeia as pastas para nomes mais curtos e limpos.
+          # A verificação '[ -d ... ]' garante que o comando não falhe se um build for pulado.
+          echo "Renaming artifact directories..."
+          [ -d genppi-win-binaries ] && mv genppi-win-binaries windows
+          [ -d genppi-mac-binaries ] && mv genppi-mac-binaries macos
+          [ -d genppi-linux-binaries ] && mv genppi-linux-binaries linux
+          
+          echo "Final directory structure:"
+          ls -R
+
+      # --- ALTERAÇÃO NO COMANDO ZIP ---
+      - name: Create single zip archive with structured folders
+        run: |
+          cd all-binaries
+          # Compacta recursivamente (-r) as pastas renomeadas em um zip no diretório pai.
+          # O conflito do README.md é evitado pois cada um está em sua própria subpasta.
+          zip -r ../all-genppi-binaries.zip *
+
       - name: Upload single zip artifact
         uses: actions/upload-artifact@v4
         with:
