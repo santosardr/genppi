@@ -368,13 +368,8 @@ jobs:
       - name: List final directory structure before zipping
         run: ls -R final_binaries
 
-      - name: Create single zip archive with structured folders
-        run: |
-          cd final_binaries
-          zip -r ../all-genppi-binaries.zip .
-
-      - name: Upload single zip artifact
+      - name: Upload all binaries as a single zip artifact
         uses: actions/upload-artifact@v4
         with:
           name: all-genppi-binaries
-          path: all-genppi-binaries.zip
+          path: final_binaries/
