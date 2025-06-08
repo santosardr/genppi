@@ -156,82 +156,90 @@ jobs:
       # Build genppi (4GB, 8GB, 16GB, 32GB)
       - name: Build genppi 4GB
         run: |
-          $content = @'
-          (load "$env:USERPROFILE\quicklisp\setup.lisp")
+          $quicklispPath = "$env:USERPROFILE\quicklisp\setup.lisp"
+          $content = @"
+          (load "$quicklispPath")
           (load "src/genppi.lisp")
           (save-lisp-and-die "binaries/genppi4g-Win.exe" :executable t :save-runtime-options t :toplevel 'main)
-          '@
+          "@
           $content | Out-File -Encoding UTF8 build-genppi4g.lisp
           sbcl --noinform --dynamic-space-size 4096 --control-stack-size 20 --script build-genppi4g.lisp
 
       - name: Build genppi 8GB
         run: |
-          $content = @'
-          (load "$env:USERPROFILE\quicklisp\setup.lisp")
+          $quicklispPath = "$env:USERPROFILE\quicklisp\setup.lisp"
+          $content = @"
+          (load "$quicklispPath")
           (load "src/genppi.lisp")
           (save-lisp-and-die "binaries/genppi8g-Win.exe" :executable t :save-runtime-options t :toplevel 'main)
-          '@
+          "@
           $content | Out-File -Encoding UTF8 build-genppi8g.lisp
           sbcl --noinform --dynamic-space-size 8192 --control-stack-size 20 --script build-genppi8g.lisp
 
       - name: Build genppi 16GB
         run: |
-          $content = @'
-          (load "$env:USERPROFILE\quicklisp\setup.lisp")
+          $quicklispPath = "$env:USERPROFILE\quicklisp\setup.lisp"
+          $content = @"
+          (load "$quicklispPath")
           (load "src/genppi.lisp")
           (save-lisp-and-die "binaries/genppi16g-Win.exe" :executable t :save-runtime-options t :toplevel 'main)
-          '@
+          "@
           $content | Out-File -Encoding UTF8 build-genppi16g.lisp
           sbcl --noinform --dynamic-space-size 16384 --control-stack-size 20 --script build-genppi16g.lisp
 
       - name: Build genppi 32GB
         run: |
-          $content = @'
-          (load "$env:USERPROFILE\quicklisp\setup.lisp")
+          $quicklispPath = "$env:USERPROFILE\quicklisp\setup.lisp"
+          $content = @"
+          (load "$quicklispPath")
           (load "src/genppi.lisp")
           (save-lisp-and-die "binaries/genppi32g-Win.exe" :executable t :save-runtime-options t :toplevel 'main)
-          '@
+          "@
           $content | Out-File -Encoding UTF8 build-genppi32g.lisp
           sbcl --noinform --dynamic-space-size 32768 --control-stack-size 20 --script build-genppi32g.lisp
 
       # Build genppidb (4GB, 8GB, 16GB, 32GB)
       - name: Build genppidb 4GB
         run: |
-          $content = @'
-          (load "$env:USERPROFILE\quicklisp\setup.lisp")
+          $quicklispPath = "$env:USERPROFILE\quicklisp\setup.lisp"
+          $content = @"
+          (load "$quicklispPath")
           (load "src/genppidb.lisp")
           (save-lisp-and-die "binaries/genppidb4g-Win.exe" :executable t :save-runtime-options t :toplevel 'main)
-          '@
+          "@
           $content | Out-File -Encoding UTF8 build-genppidb4g.lisp
           sbcl --noinform --dynamic-space-size 4096 --control-stack-size 20 --script build-genppidb4g.lisp
 
       - name: Build genppidb 8GB
         run: |
-          $content = @'
-          (load "$env:USERPROFILE\quicklisp\setup.lisp")
+          $quicklispPath = "$env:USERPROFILE\quicklisp\setup.lisp"
+          $content = @"
+          (load "$quicklispPath")
           (load "src/genppidb.lisp")
           (save-lisp-and-die "binaries/genppidb8g-Win.exe" :executable t :save-runtime-options t :toplevel 'main)
-          '@
+          "@
           $content | Out-File -Encoding UTF8 build-genppidb8g.lisp
           sbcl --noinform --dynamic-space-size 8192 --control-stack-size 20 --script build-genppidb8g.lisp
 
       - name: Build genppidb 16GB
         run: |
-          $content = @'
-          (load "$env:USERPROFILE\quicklisp\setup.lisp")
+          $quicklispPath = "$env:USERPROFILE\quicklisp\setup.lisp"
+          $content = @"
+          (load "$quicklispPath")
           (load "src/genppidb.lisp")
           (save-lisp-and-die "binaries/genppidb16g-Win.exe" :executable t :save-runtime-options t :toplevel 'main)
-          '@
+          "@
           $content | Out-File -Encoding UTF8 build-genppidb16g.lisp
           sbcl --noinform --dynamic-space-size 16384 --control-stack-size 20 --script build-genppidb16g.lisp
 
       - name: Build genppidb 32GB
         run: |
-          $content = @'
-          (load "$env:USERPROFILE\quicklisp\setup.lisp")
+          $quicklispPath = "$env:USERPROFILE\quicklisp\setup.lisp"
+          $content = @"
+          (load "$quicklispPath")
           (load "src/genppidb.lisp")
           (save-lisp-and-die "binaries/genppidb32g-Win.exe" :executable t :save-runtime-options t :toplevel 'main)
-          '@
+          "@
           $content | Out-File -Encoding UTF8 build-genppidb32g.lisp
           sbcl --noinform --dynamic-space-size 32768 --control-stack-size 20 --script build-genppidb32g.lisp
 #end make
