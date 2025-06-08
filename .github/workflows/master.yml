@@ -308,22 +308,23 @@ jobs:
       )
     runs-on: ubuntu-latest
     steps:
-      # --- ALTERAÇÃO AQUI ---
-      # Baixamos todos os artefatos para um único diretório. 
-      # Ao omitir o parâmetro 'name', a ação baixa todos os artefatos da execução do workflow.
       - name: Download all platform artifacts
         uses: actions/download-artifact@v4
         with:
           path: all-binaries
 
-      # --- ALTERAÇÃO AQUI ---
-      # Criamos um único zip a partir do diretório que agora contém todos os binários.
+      # --- PASSO ADICIONADO AQUI ---
+      - name: Remove artifact metadata files
+        run: |
+          # Encontra e remove todos os arquivos README.md dentro do diretório de binários
+          find all-binaries/ -name "README.md" -type f -delete
+      
       - name: Create single zip archive
         run: |
+          # O comando zip agora funcionará sem conflitos de nome.
+          # Usamos -j para achatar a estrutura e colocar todos os binários na raiz do zip.
           cd all-binaries
-          # O comando 'zip -j' (junk-paths) é mais robusto, pois ele ignora a estrutura de diretórios
-          # e coloca todos os arquivos na raiz do zip.
-          zip -j ../all-genppi-binaries.zip ./*/* 
+          zip -j ../all-genppi-binaries.zip ./*/*
       
       - name: Upload single zip artifact
         uses: actions/upload-artifact@v4
