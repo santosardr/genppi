@@ -3138,22 +3138,28 @@
  (dolist (i (load-db (concatenate 'string workingdir "/database/ppi-conserved-neighborhood/" g ".db")))
  (setf perfil-filo-A (find-if #'(lambda (x) (equalp (ppi-struct-genea i) (first x))) perfil-filo-g))
  (setf perfil-filo-B (find-if #'(lambda (x) (equalp (ppi-struct-geneb i) (first x))) perfil-filo-g))
- (unless (or (eql perfil-filo-A nil)
- (eql perfil-filo-B nil)
+(unless (or (eql perfil-filo-A nil)
+             (eql perfil-filo-B nil)
  );or
- (if (eql nil (set-exclusive-or (second perfil-filo-A) (second perfil-filo-B) :test #'string=))
- (progn
- (push (list (list (first perfil-filo-A) '-- (first perfil-filo-B))
- (list 'Weight '= percentage-pp) (third perfil-filo-A)) lista-ppi-pp)
- (setf cont (incf cont))
- );progn
- (if (<= (length (set-exclusive-or (second perfil-filo-A) (second perfil-filo-B) :test #'string=)) ppdifftolerated)
- (progn
- (push (list (list (first perfil-filo-A) '-- (first perfil-filo-B))
- (list 'Weight '= percentage-pp) (third perfil-filo-A)) lista-ppi-pp)
- (setf cont (incf cont))
- );progn
- )
+   (if (eql nil (set-exclusive-or (second perfil-filo-A) (second perfil-filo-B) :test #'string=))
+       (progn
+         (push (make-ppi-struct :genea (first perfil-filo-A)
+                                :geneb (first perfil-filo-B)
+                                :weight percentage-pp
+                                :position (third perfil-filo-A))
+               lista-ppi-pp)
+         (setf cont (incf cont))
+       );progn
+       (if (<= (length (set-exclusive-or (second perfil-filo-A) (second perfil-filo-B) :test #'string=)) ppdifftolerated)
+           (progn
+             (push (make-ppi-struct :genea (first perfil-filo-A)
+                                    :geneb (first perfil-filo-B)
+                                    :weight percentage-pp
+                                    :position (third perfil-filo-A))
+                   lista-ppi-pp)
+             (setf cont (incf cont))
+           );progn
+       )
 ;Mesclando PPI:
 ;(setf (third (second i)) (+ (third (second i)) (* percentage-pp 1.0)))
  );if

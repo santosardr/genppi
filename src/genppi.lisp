@@ -2828,7 +2828,7 @@
  );unless
  (cond
 ;Start of Condition and Action 1
- ((and (string= ppcn "Y") (> (hash-table-count *genomas*) 1))
+((and (string= ppcn "Y") (> (hash-table-count *genomas*) 1))
 ;Generating ppi by phylogenetic profile for interactions predicted by conserved gene neighborhood.
  (format t "~%Predicting ppi by phylogenetic profiles;~%")
  (format t "[05 10 15 20 25 30 35 40 45 50 55 60 65 70 75 80 85 90 95 100]%~%")
@@ -2846,19 +2846,24 @@
  (unless (or (eql perfil-filo-A nil)
  (eql perfil-filo-B nil)
  );or
- (if (eql nil (set-exclusive-or (second perfil-filo-A) (second perfil-filo-B) :test #'string=))
- (progn
- (push (list (list (first perfil-filo-A) '-- (first perfil-filo-B))
- (list 'Weight '= percentage-pp) (third perfil-filo-A)) lista-ppi-pp)
- );progn
- (if (<= (length (set-exclusive-or (second perfil-filo-A) (second perfil-filo-B) :test #'string=)) ppdifftolerated)
- (progn
- (push (list (list (first perfil-filo-A) '-- (first perfil-filo-B))
- (list 'Weight '= percentage-pp) (third perfil-filo-A)) lista-ppi-pp)
- );progn
- )
-;Mesclando ppi:
-;(setf (third (second i)) (+ (third (second i)) (* percentage-pp 1.0)))
+    ;; CORREÇÃO AQUI: Criar a estrutura correta em vez de uma lista
+   (if (eql nil (set-exclusive-or (second perfil-filo-A) (second perfil-filo-B) :test #'string=))
+       (progn
+         (push (make-ppi-struct :genea (first perfil-filo-A)
+                                :geneb (first perfil-filo-B)
+                                :weight percentage-pp
+                                :position (third perfil-filo-A)) ; Usa a posição da proteína A
+               lista-ppi-pp)
+       );progn
+       (if (<= (length (set-exclusive-or (second perfil-filo-A) (second perfil-filo-B) :test #'string=)) ppdifftolerated)
+           (progn
+             (push (make-ppi-struct :genea (first perfil-filo-A)
+                                    :geneb (first perfil-filo-B)
+                                    :weight percentage-pp
+                                    :position (third perfil-filo-A)) ; Usa a posição da proteína A
+                   lista-ppi-pp)
+           );progn
+       )
  );if
  );unless
  );dolist
@@ -2882,7 +2887,8 @@
  (incf genomenumber)
  );dolist genomas-files
  (format t "]~%")
- );End of Condition and Action 1
+ )  
+;End of Condition and Action 1
 ;Beginning of Condition and Action 2
  ((and (string= ppcomplete "Y") (> (hash-table-count *genomas*) 1))
  (setf ppi-phylogenetic-profiles (phylogenetic-profiles-complete percentage-pp ppdifftolerated))
