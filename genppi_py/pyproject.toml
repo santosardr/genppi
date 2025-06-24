@@ -1,0 +1,46 @@
+[build-system]
+requires = ["setuptools>=42", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "genppi-py"
+version = "0.1.5"
+description = "Python interface for GenPPI (Genomic-based Protein-Protein Interaction prediction)"
+authors = [{name = "GenPPI Team", email = "example@example.com"}]
+license = {text = "GPL-3.0-or-later"}
+readme = "README.md"
+requires-python = ">=3.6"
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Science/Research",
+    "License :: OSI Approved :: GNU General Public License v3 (GPLv3)",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.6",
+    "Programming Language :: Python :: 3.7",
+    "Programming Language :: Python :: 3.8",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Topic :: Scientific/Engineering :: Bio-Informatics",
+]
+dependencies = [
+    "py7zr>=0.20.0,<1.0.0",
+    "multivolumefile>=0.2.3",
+]
+
+[project.urls]
+Homepage = "https://github.com/santosardr/genppi"
+Repository = "https://github.com/santosardr/genppi"
+Issues = "https://github.com/santosardr/genppi/issues"
+
+[project.scripts]
+"genppi.py" = "genppi_py.genppi:main"
+"genppi-download-samples" = "genppi_py.download_samples:download_samples"
+"genppi-download-model" = "genppi_py.download_model:main"
+
+[tool.setuptools]
+packages = ["genppi_py", "genppi_py.bin"]
+include-package-data = true
+
+[tool.setuptools.package-data]
+"genppi_py.bin" = ["*"]

@@ -1,0 +1,15 @@
+include README.md
+include MAINTAINERS.md
+include install.sh
+include install.bat
+recursive-include genppi_py *.py
+recursive-include genppi_py/bin *
+recursive-include docs *.tex *.pdf
+recursive-include scripts *.py
+recursive-include tests *.py
+recursive-include tools *.py *.txt *.ini
+global-exclude *.pyc
+global-exclude __pycache__
+global-exclude *.so
+global-exclude .DS_Store
+global-exclude tmp_code_*

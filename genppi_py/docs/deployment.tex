@@ -1,0 +1,384 @@
+% --- START OF FILE deployment_en.tex ---
+
+\documentclass[11pt, a4paper]{article}
+
+% --- GENERAL PACKAGES AND CONFIGURATION ---
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage[english]{babel} % Changed to English
+\usepackage{geometry}
+\geometry{a4paper, margin=1in}
+
+% --- FONTS AND TITLES ---
+\usepackage{lmodern} % Modern font
+\usepackage{titlesec}
+\titleformat{\section}{\normalfont\Large\bfseries}{\thesection}{1em}{}
+\titleformat{\subsection}{\normalfont\large\bfseries}{\thesubsection}{1em}{}
+\titlespacing*{\section}{0pt}{3.5ex plus 1ex minus .2ex}{2.3ex plus .2ex}
+
+% --- CODE FORMATTING (LISTINGS PACKAGE) ---
+\usepackage{xcolor}
+\usepackage{listings}
+
+\definecolor{codegray}{rgb}{0.5,0.5,0.5}
+\definecolor{codepurple}{rgb}{0.58,0,0.82}
+\definecolor{codebackground}{rgb}{0.96,0.96,0.96}
+
+% Style for shell commands (bash)
+\lstdefinestyle{bashstyle}{
+    backgroundcolor=\color{codebackground},   
+    commentstyle=\color{codegray},
+    keywordstyle=\color{blue},
+    stringstyle=\color{codepurple},
+    basicstyle=\ttfamily\small,
+    breakatwhitespace=false,         
+    breaklines=true,                 
+    captionpos=b,                    
+    keepspaces=true,                 
+    numbers=left,                    
+    numbersep=5pt,                   
+    showspaces=false,                
+    showstringspaces=false,
+    showtabs=false,                  
+    tabsize=2,
+    frame=single,
+    rulecolor=\color{black!20},
+    language=bash,
+    upquote=true,
+}
+
+% Style for Python
+\lstdefinestyle{pythonstyle}{
+    style=bashstyle,
+    language=Python
+}
+
+% --- OTHER PACKAGES ---
+\usepackage{hyperref}
+\hypersetup{
+    colorlinks=true,
+    linkcolor=blue,
+    filecolor=magenta,      
+    urlcolor=cyan,
+    pdftitle={GenPPI Deployment Guide for PyPI}, % Translated
+    pdfpagemode=FullScreen,
+}
+
+% --- DOCUMENT START ---
+
+\title{\bfseries GenPPI Deployment Guide for PyPI}
+\author{GenPPI Team}
+\date{\today}
+
+\begin{document}
+\maketitle
+
+This document is a detailed guide on how to prepare, test, and publish the GenPPI Python interface on the Python Package Index (PyPI). Version 0.1.5 uses the py7zr library for multi-volume file extraction to ensure compatibility.
+
+\section{Preparation Checklist}
+
+Before publishing, follow this checklist to ensure the package is ready.
+
+\subsection{Check Package Structure}
+Your project structure should look like this:
+\begin{verbatim}
+genppi_py/
+|-- dev.py
+|-- docs
+|   |-- deployment.pdf
+|   |-- deployment.tex
+|   |-- README.md
+|   |-- testing.pdf
+|   `-- testing.tex
+|-- genppi_py
+|   |-- bin
+|   |   `-- __init__.py
+|   |-- cli.py
+|   |-- download_model_direct.py
+|   |-- download_model.py
+|   |-- download_samples.py
+|   |-- genppi.py
+|   `-- __init__.py
+|-- install.bat
+|-- install.sh
+|-- MAINTAINERS.md
+|-- MANIFEST.in
+|-- pyproject.toml
+|-- README.md
+|-- scripts
+|   |-- build_and_test.py
+|   |-- deploy_production.py
+|   |-- deploy_test.py
+|   |-- quick_check.py
+|   |-- README.md
+|   |-- test_installation.py
+|   `-- test_upload.py
+|-- setup.py
+|-- tests
+|   |-- README.md
+|   `-- test_genppi.py
+`-- tools
+    |-- prepare_release.py
+    |-- README.md
+    |-- requirements-dev.txt
+    `-- tox.ini
+\end{verbatim}
+
+\subsection{Update Package Version}
+Edit the \texttt{genppi\_py/\_\_init\_\_.py} and \texttt{pyproject.toml} files to update the version number, following semantic versioning.
+\begin{lstlisting}[style=pythonstyle]
+# in genppi_py/__init__.py
+__version__ = '0.1.5'  # Current version
+
+# in pyproject.toml
+[project]
+name = "genppi-py"
+version = "0.1.5"
+# ... rest of the configuration
+\end{lstlisting}
+
+\subsection{Review Configuration Files}
+\subsubsection{setup.py}
+Version 0.1.5 uses a simplified configuration. Required dependencies are defined in \texttt{pyproject.toml}:
+\begin{lstlisting}[style=pythonstyle]
+# Current setup.py configuration (simplified)
+setup(
+    cmdclass={
+        'install': CustomInstall,
+    },
+)
+
+# Dependencies are defined in pyproject.toml
+[project]
+dependencies = [
+    "py7zr>=0.20.0,<1.0.0",  # For multi-volume 7z extraction
+    "multivolumefile>=0.2.3",  # Required by py7zr
+]
+\end{lstlisting}
+Version 0.1.5 ensures that critical dependencies (py7zr and multivolumefile) are installed automatically. This eliminates issues with multi-volume file extraction.
+
+\textbf{Important notes on licenses:} 
+\begin{itemize}
+    \item Ensure the package name in \texttt{README.md} matches the name in \texttt{setup.py} (\texttt{genppi-py}).
+    \item \textbf{Issue with modern license fields:} TestPyPI does not support fields like \texttt{license\_files} or \texttt{license-expression}. To avoid upload errors, use only the license classifier in \texttt{classifiers}.
+    \item If you encounter a \texttt{"unrecognized or malformed field 'license-file'"} error, temporarily remove the \texttt{LICENSE} file during the build, or just use the classifier.
+    \item For maximum compatibility, only use: \texttt{'License :: OSI Approved :: GNU General Public License v3 (GPLv3)'} in the classifiers.
+\end{itemize}
+
+\subsubsection{pyproject.toml}
+This file contains the modern project configuration, including metadata and dependencies:
+\begin{lstlisting}[style=bashstyle]
+[build-system]
+requires = ["setuptools>=42", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "genppi-py"
+version = "0.1.5"
+description = "Python interface for GenPPI"
+dependencies = [
+    "py7zr>=0.20.0,<1.0.0",
+    "multivolumefile>=0.2.3",
+]
+
+[project.scripts]
+"genppi.py" = "genppi_py.genppi:main"
+"genppi-download-samples" = "genppi_py.download_samples:download_samples"
+"genppi-download-model" = "genppi_py.download_model:main"
+\end{lstlisting}
+
+\subsection{Generate Distribution Files}
+Install the build tools and create the distribution packages.
+\begin{lstlisting}[style=bashstyle]
+# Install the tools if you haven't already
+pip install build twine
+
+# Clean old builds to avoid issues
+rm -rf dist/ build/ *.egg-info
+
+# Create the new distribution packages
+python -m build
+\end{lstlisting}
+This command will create a \texttt{dist/} folder containing a \texttt{.tar.gz} file (source distribution) and a \texttt{.whl} file (wheel).
+
+\section{Publishing to PyPI}
+With the packages generated, the next step is to publish them.
+
+\subsection{Step 1: Publish to TestPyPI (Highly Recommended)}
+Always publish to the test server first to ensure everything works.
+\begin{lstlisting}[style=bashstyle]
+# Upload to TestPyPI
+python -m twine upload --repository testpypi dist/*
+\end{lstlisting}
+You will need an account on \href{https://test.pypi.org/}{TestPyPI}. After uploading, test the installation in a clean virtual environment:
+\begin{lstlisting}[style=bashstyle]
+# Create and activate a new virtual environment
+python -m venv test_env
+source test_env/bin/activate
+
+# Install version 0.1.5 from TestPyPI (with dependencies from official PyPI)
+pip install --index-url https://test.pypi.org/simple/ --extra-index-url https://pypi.org/simple/ genppi-py==0.1.5
+
+# Verify critical dependencies
+python -c "import py7zr; print('py7zr:', py7zr.__version__)"
+python -c "import multivolumefile; print('multivolumefile OK')"
+
+# Run a quick test
+genppi.py --help
+\end{lstlisting}
+
+\subsection{Step 2: Publish to the Official PyPI}
+
+\textbf{IMPORTANT - TestPyPI vs. Official PyPI:}
+
+\textbf{TestPyPI (For Developers Only):}
+\begin{itemize}
+    \item A test environment with limited dependencies.
+    \item Requires a complex command to install dependencies.
+    \item End-users should NOT use this command.
+\end{itemize}
+
+\textbf{Official PyPI (For End-Users):}
+\begin{itemize}
+    \item A production environment with all dependencies.
+    \item Uses a simple command for installation.
+    \item Provides an optimized user experience.
+\end{itemize}
+
+If the TestPyPI trial was successful, publish to the official PyPI:
+\begin{lstlisting}[style=bashstyle]
+# Upload to the official PyPI
+python -m twine upload dist/*
+
+# Or use an automated script
+python deploy_production.py
+\end{lstlisting}
+
+\textbf{Result for the End-User:}
+After the official release, users can install simply with:
+\begin{lstlisting}[style=bashstyle]
+# SIMPLE COMMAND FOR END-USERS
+pip install genppi-py
+\end{lstlisting}
+
+You will need an account on \href{https://pypi.org/}{PyPI}.
+
+\subsection{Step 3: Final Verification}
+After publishing, check your project page at \texttt{https://pypi.org/project/genppi-py/}. Finally, perform one last installation test from the official PyPI in a clean virtual environment to ensure a smooth end-user experience.
+
+\subsection{Common Troubleshooting}
+\subsubsection{Error: \texttt{unrecognized or malformed field 'license-file'}}
+This error occurs when setuptools generates modern license fields that PyPI does not yet support. To resolve it:
+\begin{enumerate}
+    \item Temporarily remove the \texttt{LICENSE} file from the project directory.
+    \item Use only the traditional license classifier in \texttt{setup.py}.
+    \item Avoid using \texttt{license\_files} or license fields in \texttt{pyproject.toml}.
+    \item After a successful upload, restore the \texttt{LICENSE} file.
+\end{enumerate}
+
+\subsubsection{Verifying Metadata}
+Before uploading, always check the generated metadata:
+\begin{lstlisting}[style=bashstyle]
+# Check the metadata content
+cat genppi_py.egg-info/PKG-INFO | head -20
+
+# Look for problematic fields such as:
+# License-File: LICENSE
+# License-Expression: GPL-3.0-or-later
+\end{lstlisting}
+
+\subsubsection{Dependency Issues on TestPyPI}
+Version 0.1.5 uses dependencies available on the official PyPI. If you encounter issues:
+\begin{lstlisting}[style=bashstyle]
+# Check if py7zr is available
+pip install "py7zr>=0.20.0,<1.0.0"
+pip install "multivolumefile>=0.2.3"
+
+# Then install the test package (with dependencies from official PyPI)
+pip install --index-url https://test.pypi.org/simple/ --extra-index-url https://pypi.org/simple/ genppi-py==0.1.5
+
+# Verify installation
+python -c "import py7zr, multivolumefile; print('Dependencies OK')"
+\end{lstlisting}
+
+\section{Automation and Maintenance}
+
+\subsection{Automated Deployment Scripts}
+The project includes automated scripts to streamline the deployment process:
+
+\subsubsection{quick\_check.py}
+Performs a quick check of dependencies and features:
+\begin{lstlisting}[style=bashstyle]
+python quick_check.py
+\end{lstlisting}
+
+\subsubsection{build\_and\_test.py}
+Runs a full build with comprehensive tests:
+\begin{lstlisting}[style=bashstyle]
+python build_and_test.py
+\end{lstlisting}
+
+\subsubsection{deploy\_test.py}
+Automates deployment to the test environment:
+\begin{lstlisting}[style=bashstyle]
+python deploy_test.py
+\end{lstlisting}
+
+\subsection{Manual Publishing Script}
+For manual releases, you can use a script like \texttt{publish.sh}:
+\begin{lstlisting}[style=bashstyle]
+#!/bin/bash
+set -e # Exit script if a command fails
+
+# Ask for version confirmation
+read -p "Have you updated the version in __init__.py? (y/n) " -n 1 -r
+echo
+if [[ ! $REPLY =~ ^[Yy]$ ]]; then
+    exit 1
+fi
+
+echo "Cleaning old builds..."
+rm -rf dist/ build/ *.egg-info
+
+echo "Generating new packages..."
+python -m build
+
+echo "Uploading to PyPI..."
+python -m twine upload dist/*
+
+echo "Publication complete!"
+\end{lstlisting}
+
+\subsection{Updating the Package}
+To release a new version:
+\begin{enumerate}
+    \item Update the source code with new features or fixes.
+    \item If needed, update the Lisp executables or \texttt{model.dat} file in the source GitHub repository.
+    \item Increment the version number in \texttt{genppi\_py/\_\_init\_\_.py}.
+    \item Run the \texttt{publish.sh} script to publish the new version.
+\end{enumerate}
+
+\subsection{Updating \texttt{model.dat}}
+If you need to generate new versions of \texttt{model.dat}:
+\begin{enumerate}
+    \item Create the new \texttt{model.dat} file.
+    \item Compress it into parts using 7-Zip (e.g., 10MB parts):
+    \begin{lstlisting}[style=bashstyle]
+7z a -v10m model.7z model.dat
+    \end{lstlisting}
+    \item Test the extraction with py7zr:
+    \begin{lstlisting}[style=bashstyle]
+python -c "
+import py7zr
+from multivolumefile import MultiVolume
+with MultiVolume('model.7z', mode='rb') as vol:
+    with py7zr.SevenZipFile(vol, mode='r') as archive:
+        print('Files in volume:', archive.getnames())
+        archive.extractall(path='test_extract')
+"
+    \end{lstlisting}
+    \item Replace the \texttt{model.7z.00*} files in your source repository.
+\end{enumerate}
+
+\end{document}
+% --- END OF FILE deployment_en.tex ---

@@ -1,0 +1,246 @@
+% --- START OF FILE testing_en.tex ---
+
+\documentclass[11pt, a4paper]{article}
+
+% BASIC PACKAGES
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage[english]{babel} % Changed to English
+\usepackage{geometry}
+\geometry{a4paper, margin=1in}
+
+% FONTS AND TITLES
+\usepackage{tgpagella} % Nice text font
+\usepackage{titlesec}
+\titleformat{\section}{\normalfont\Large\bfseries}{\thesection}{1em}{}
+\titleformat{\subsection}{\normalfont\large\bfseries}{\thesubsection}{1em}{}
+\titlespacing*{\section}{0pt}{3.5ex plus 1ex minus .2ex}{2.3ex plus .2ex}
+
+% CODE FORMATTING
+\usepackage{xcolor}
+\usepackage{listings}
+
+\definecolor{codegray}{rgb}{0.5,0.5,0.5}
+\definecolor{codepurple}{rgb}{0.58,0,0.82}
+\definecolor{codebackground}{rgb}{0.95,0.95,0.95}
+
+\lstdefinestyle{bashstyle}{
+    backgroundcolor=\color{codebackground},   
+    commentstyle=\color{codegray},
+    keywordstyle=\color{blue},
+    stringstyle=\color{codepurple},
+    basicstyle=\ttfamily\small,
+    breakatwhitespace=false,         
+    breaklines=true,                 
+    captionpos=b,                    
+    keepspaces=true,                 
+    numbers=left,                    
+    numbersep=5pt,                   
+    showspaces=false,                
+    showstringspaces=false,
+    showtabs=false,                  
+    tabsize=2,
+    frame=single,
+    rulecolor=\color{black!20}
+}
+
+% OTHERS
+\usepackage{hyperref}
+\hypersetup{
+    colorlinks=true,
+    linkcolor=blue,
+    filecolor=magenta,      
+    urlcolor=cyan,
+    pdftitle={Testing Guide for GenPPI}, % Translated
+    pdfpagemode=FullScreen,
+}
+
+% --- DOCUMENT START ---
+
+\title{\bfseries Testing Guide for the GenPPI Python Interface}
+\author{}
+\date{}
+
+\begin{document}
+\maketitle
+
+This document provides a simplified guide to installing and testing the GenPPI Python interface. It focuses on the most common use cases.
+
+\section{Environment Setup}
+Follow these steps to set up your test environment.
+
+\subsection{Installation (Development Mode)}
+To test and modify the code, install the package in development mode. This allows your source code changes to be reflected immediately without needing to reinstall.
+
+\begin{lstlisting}[style=bashstyle]
+# Navigate to the project's root directory (where setup.py is)
+cd /path/to/genppi_py
+
+# Install in development mode
+pip install -e .
+\end{lstlisting}
+
+\subsection{Installation (Production Version)}
+To install the stable version from TestPyPI:
+
+\begin{lstlisting}[style=bashstyle]
+# Install version 0.1.2 from TestPyPI (with dependencies from official PyPI)
+pip install --index-url https://test.pypi.org/simple/ --extra-index-url https://pypi.org/simple/ genppi-py==0.1.2
+
+# Verify critical dependencies
+python -c "import py7zr; print('py7zr:', py7zr.__version__)"
+python -c "import multivolumefile; print('multivolumefile OK')"
+\end{lstlisting}
+
+\textbf{Important Note:} Version 0.1.2 exclusively uses the py7zr library to extract multi-volume \texttt{model.7z} files. The dependencies \texttt{py7zr>=0.20.0} and \texttt{multivolumefile>=0.2.3} are installed automatically.
+
+\textbf{Note on TestPyPI:} Since TestPyPI does not host all dependencies, you must use the \texttt{--extra-index-url} flag. This allows pip to fetch dependencies (like py7zr and multivolumefile) from the official PyPI.
+
+\subsection{Downloading Test Data}
+The package includes a command to easily download the required sample files for testing.
+\begin{lstlisting}[style=bashstyle]
+# This command will create a 'samples' folder in your current directory
+genppi-download-samples
+\end{lstlisting}
+This will download the necessary protein files and save them in the \texttt{samples/} folder.
+
+\subsection{Verifying the Installation}
+After installation, the \texttt{genppi.py} command should be available in your terminal. Check it by running the help command:
+\begin{lstlisting}[style=bashstyle]
+genppi.py --help
+\end{lstlisting}
+This should display a list of all available parameters, confirming a successful installation.
+
+\section{Running the Main Tests}
+GenPPI is designed to be user-friendly. The following tests cover over 90\% of use cases.
+
+\subsection{Test 1: Standard Execution (Most Common)}
+The most common usage is to simply provide the directory with the protein files. \textbf{GenPPI automatically runs conserved neighborhood and phylogenetic profiles (Method 1) when multiple genomes are present.}
+\begin{lstlisting}[style=bashstyle]
+# Run GenPPI on the sample data (CN + PP Method 1 are automatic)
+genppi.py -dir samples
+
+# Run with gene fusion as well
+genppi.py -dir samples -genefusion
+\end{lstlisting}
+The program will process the files and generate results in the \texttt{samples/} folder.
+
+\subsection{Test 2: Running with Machine Learning (Higher Accuracy)}
+For a more accurate analysis, you can enable the Machine Learning model with the \texttt{-ml} flag. This is the second most common use case.
+
+\textbf{Prerequisite:} The \texttt{model.dat} file must be available. On first run, GenPPI will try to download and extract it automatically. You can also download it manually:
+\begin{lstlisting}[style=bashstyle]
+genppi-download-model
+\end{lstlisting}
+\textbf{Running the test:}
+\begin{lstlisting}[style=bashstyle]
+# Run GenPPI with the Machine Learning model
+genppi.py -dir samples -ml
+\end{lstlisting}
+
+\subsection{Test 3: Testing Phylogenetic Profile Methods}
+GenPPI offers 7 different methods for phylogenetic profile prediction. Method 1 is the default, but you can choose others using \texttt{-ppmethod}:
+\begin{lstlisting}[style=bashstyle]
+# Method 1: No filters (default - these commands are equivalent)
+genppi.py -dir samples
+genppi.py -dir samples -ppmethod 1
+
+# Method 2: Only conserved neighborhood interactions
+genppi.py -dir samples -ppmethod 2
+
+# Method 5: Filter by threshold (requires additional parameters)
+genppi.py -dir samples -ppmethod 5 -threshold 5 -plusminus ">"
+\end{lstlisting}
+
+\subsection{Test 4: Running with Low Memory Usage (\texttt{--use-db})}
+If you are working with many genomes or on a machine with limited memory, use the \texttt{--use-db} flag. This makes GenPPI save intermediate data to disk instead of keeping it in memory.
+\begin{lstlisting}[style=bashstyle]
+# Combine with standard execution or with -ml
+genppi.py -dir samples -ml --use-db
+\end{lstlisting}
+
+\section{Verifying the Results}
+After running any of the tests above, check that the result files were created correctly.
+\begin{lstlisting}[style=bashstyle]
+# List the report and network files
+ls -l samples/ppi-report/
+ls -l samples/ppi-files/
+\end{lstlisting}
+You should see a \texttt{report.txt} file and several network files (like \texttt{.sif} and \texttt{.dot}) inside these folders.
+
+\section{Testing Automatic Recovery}
+An important feature of the package is its ability to download missing components.
+
+\subsection{Testing the Executable Download}
+\begin{enumerate}
+    \item \textbf{Remove the executable:}
+    \begin{lstlisting}[style=bashstyle]
+# (Adjust the path if your structure is different)
+rm -f genppi_py/genppi_py/bin/genppi32g-Linux
+    \end{lstlisting}
+    \item \textbf{Run a simple command:}
+    \begin{lstlisting}[style=bashstyle]
+genppi.py --help
+    \end{lstlisting}
+\end{enumerate}
+The package should silently download the missing executable and then display the help message.
+
+\subsection{Testing the ML Model Download}
+\begin{enumerate}
+    \item \textbf{Remove the model file:}
+    \begin{lstlisting}[style=bashstyle]
+# (Adjust the path if your structure is different)
+rm -f genppi_py/genppi_py/bin/model.dat
+    \end{lstlisting}
+    \item \textbf{Run a command that requires the model:}
+    \begin{lstlisting}[style=bashstyle]
+genppi.py -dir samples -ml
+    \end{lstlisting}
+\end{enumerate}
+You will see messages indicating that \texttt{model.dat} was not found and that the download and extraction will begin.
+
+\section{Common Troubleshooting}
+If something goes wrong, check the following points:
+\begin{itemize}
+    \item \textbf{Permission Issues (Linux/macOS):} If you get a "Permission denied" error, the executables may lack execution permissions. Fix it with:
+    \begin{lstlisting}[style=bashstyle]
+chmod +x genppi_py/genppi_py/bin/genppi*
+    \end{lstlisting}
+    
+    \item \textbf{Failed to Extract \texttt{model.dat}:} Version 0.1.2 uses the py7zr library for multi-volume extraction. If automatic extraction fails:
+    \begin{enumerate}
+        \item \textbf{Check py7zr installation:}
+        \begin{lstlisting}[style=bashstyle]
+# Check if py7zr is installed correctly
+python -c "import py7zr; print('py7zr version:', py7zr.__version__)"
+
+# If needed, reinstall a specific version
+pip install --upgrade --force-reinstall "py7zr>=0.20.0,<1.0.0"
+        \end{lstlisting}
+        
+        \item \textbf{Manual extraction:} If automatic extraction still fails, extract it manually:
+        \begin{lstlisting}[style=bashstyle]
+# Download the 7z file parts manually
+wget https://github.com/santosardr/genppi/raw/master/src/model.7z.001
+wget https://github.com/santosardr/genppi/raw/master/src/model.7z.002
+wget https://github.com/santosardr/genppi/raw/master/src/model.7z.003
+
+# Extract using py7zr
+python -c "
+import py7zr
+from multivolumefile import MultiVolume
+with MultiVolume('model.7z', mode='rb') as vol:
+    with py7zr.SevenZipFile(vol, mode='r') as archive:
+        archive.extractall(path='.')
+"
+        \end{lstlisting}
+        
+        \item After manual extraction, move the \texttt{model.dat} file to the package's bin directory.
+    \end{enumerate}
+\end{itemize}
+
+With this guide, you can quickly and efficiently validate the core functionalities of your GenPPI package.
+
+\end{document}
+
+% --- END OF FILE testing_en.tex ---

@@ -1,0 +1,72 @@
+# ===================================================================
+#  Padrão de .gitignore para Projetos Python
+# ===================================================================
+
+# 1. Byte-code e Cache do Python
+# -------------------------------------------------------------------
+# Arquivos gerados pelo interpretador Python.
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+
+# 2. Distribuição / Build / Instalação
+# -------------------------------------------------------------------
+# Pastas e arquivos gerados ao empacotar seu projeto (pip, setuptools, wheel).
+# Isso inclui as pastas que você removeu manualmente.
+build/
+dist/
+*.egg-info/
+.eggs/
+sdist/
+develop-eggs/
+parts/
+wheels/
+*.egg
+
+
+# 3. Ambientes Virtuais (Virtual Environments)
+# -------------------------------------------------------------------
+# Nunca inclua a pasta do seu ambiente virtual no Git.
+.env/
+.venv/
+env/
+venv/
+ENV/
+env.bak/
+venv.bak/
+
+
+# 4. Artefatos de Teste e Cobertura de Código
+# -------------------------------------------------------------------
+# Arquivos gerados por ferramentas como pytest e coverage.
+.pytest_cache/
+.tox/
+.coverage
+.coverage.*
+htmlcov/
+nosetests.xml
+coverage.xml
+
+
+# 5. Arquivos de Configuração de IDEs e Editores
+# -------------------------------------------------------------------
+# Mantém o repositório limpo de configurações pessoais de desenvolvimento.
+.vscode/
+.idea/
+*.sublime-project
+*.sublime-workspace
+
+
+# 6. Arquivos específicos de Sistemas Operacionais
+# -------------------------------------------------------------------
+.DS_Store
+Thumbs.db
+
+
+# 7. Arquivos de Log e Banco de Dados
+# -------------------------------------------------------------------
+*.log
+*.db
+*.sqlite3
