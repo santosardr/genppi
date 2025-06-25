@@ -1,11 +1,46 @@
 # GENPPI: Ab initio protein interaction network generator
 
-GENPPI is a software written in Common Lisp and compiled with SBCL to create 
-complex networks of predicted proteins from tens or hundreds of genomes.
+GENPPI is a software for creating complex networks of predicted proteins from tens or hundreds of genomes. The software is now available through an easy-to-use **Python interface** that automatically handles downloads and installation, making it accessible to researchers without Linux expertise.
 
-I have a hands-on youtube video explaining how to use it. Clique the below image to watch it.
+I have a hands-on youtube video explaining how to use it. Click the below image to watch it.
 
 [![GENPPI uncomplicated explanation](https://img.youtube.com/vi/24aXs8-Dku4/0.jpg)](https://youtu.be/zVPnL4dP5pY)
+
+## Quick Start with Python Interface (Recommended)
+
+The easiest way to use GENPPI is through the Python interface:
+
+### Installation
+```bash
+pip install genppi-py
+```
+
+### Download Model and Sample Data
+```bash
+# Download the machine learning model (required for -ml option)
+genppi-download-model
+
+# Download sample data for testing
+genppi-download-samples
+```
+
+### Basic Usage
+```bash
+# Run GENPPI on sample data
+genppi.py -dir samples
+
+# Run with gene fusion analysis
+genppi.py -dir samples -genefusion
+
+# Run with machine learning (requires model download)
+genppi.py -dir samples -ml
+```
+
+The Python interface automatically:
+- Downloads the appropriate executable for your operating system
+- Handles model file extraction
+- Provides sample data for testing
+- Works on Windows, macOS, and Linux
 
 Your main limitation is the amount of RAM in your machine/server. For instance, using a 
 conventional computer of 8 Gigabytes of RAM, the software can deal with at least
@@ -18,15 +53,54 @@ For now, I had compiled all versions available in the binaries folder to use
 different sizes of RAM.
 
 SBCL includes the whole core of libraries for each executable, and it explains the size of the 
-software in megabytes. 
-Till today, I haven't a graphical interface for GENPPI since I conceived it as 
-a command-line tool for the Linux OS. Calling the software without any arguments
+software in megabytes.
+
+## Manual Installation (Advanced Users)
+
+For users comfortable with Linux commands who prefer manual installation:
+
+### Download Executables
+You can download pre-compiled executables from the [binaries](binaries/) folder or from our web interface at [genppi.facom.ufu.br](http://genppi.facom.ufu.br).
+
+### Download Model Files
+For machine learning features, download and extract the model files:
+- [model.7z.001](https://github.com/santosardr/genppi/raw/master/src/model.7z.001)
+- [model.7z.002](https://github.com/santosardr/genppi/raw/master/src/model.7z.002)  
+- [model.7z.003](https://github.com/santosardr/genppi/raw/master/src/model.7z.003)
+
+Extract these files in your working directory to enable the `-ml` option.
+
+### Basic Usage
+GENPPI is a command-line tool. Calling the software without any arguments
 results in it printing all the possible parameters and their combinations. It 
 also happens when starting the program with the -help option. 
 
-## Fast track
+## Usage Examples
 
-I will show a fast track to obtain results with this software.
+### Python Interface Examples (Recommended)
+
+The Python interface provides the same functionality with easier setup:
+
+```bash
+# Install and setup
+pip install genppi-py
+genppi-download-model
+genppi-download-samples
+
+# Basic run with sample data
+genppi.py -dir samples
+
+# Advanced configuration
+genppi.py -ppcomplete -expt fixed -w1 7 -cw1 4\ 
+-ppdifftolerated 1 -pphistofilter -dir samples
+
+# With machine learning
+genppi.py -dir samples -ml
+```
+
+### Manual Installation Examples
+
+For users using manually downloaded executables:
 
 (i) First of all, create a folder containing multi-fasta files of predicted proteins for your 
 genomes. We will treat each file as a unique genome. I recommend you name these 
@@ -96,8 +170,28 @@ interaction network.
 - "-dir" is the location and name of the folder where you deposited the 
 multi-fasta files to be processed.
 
-## Detailed command-line Example
-To test GENPPI, inside the GENPPI GitHub *test* folder, we provided subfolders containing two genomes: *Buchnera aphidicola* and *Corynebacterium pseudotuberculosis*. For *Buchenera* genomes, we have an instant test; It should execute speedily whitout the -ml parameter. The *Corynebacterium* genomes take a little bit longer to run.
+## Detailed Examples
+
+### Using Python Interface (Recommended)
+
+The easiest way to test GENPPI is with the Python interface:
+
+```bash
+# Install and download sample data
+pip install genppi-py
+genppi-download-samples
+
+# Run basic analysis
+genppi.py -dir samples
+
+# Run with machine learning (download model first)
+genppi-download-model
+genppi.py -dir samples -ml
+```
+
+### Manual Installation Example
+
+To test GENPPI manually, inside the GENPPI GitHub *test* folder, we provided subfolders containing two genomes: *Buchnera aphidicola* and *Corynebacterium pseudotuberculosis*. For *Buchenera* genomes, we have an instant test; It should execute speedily without the -ml parameter. The *Corynebacterium* genomes take a little bit longer to run.
 
 Let's through a step-by-step using the *Buchenera* genomes:
 
@@ -132,12 +226,14 @@ For Linux and Mac:
 ```
 
 The "-r" should guarantee link preservation during copies, saving your disk space. Please, pay attention to the fact that offered links are relative to one folder up.
-For MS-Windows:
+For Windows (manual installation):
 
 ```text
     xcopy assemblies test1\
     xcopy assemblies test2\
 ```
+
+**Note:** Windows users are recommended to use the Python interface (`pip install genppi-py`) which handles these complexities automatically.
 5) If the folder copying was successful, now it's time to execute GENPPI. 
 
 5.1) *Buchenera* genomes are one of the smallest genomes we have ever known; we expect a fast GENPPI execution and a few hundred edges for each genome. Let's make it happen:
