@@ -105,11 +105,13 @@ genppi-download-samples
 This will download the necessary protein files and save them in the \texttt{samples/} folder.
 
 \subsection{Verifying the Installation}
-After installation, the \texttt{genppi.py} command should be available in your terminal. Check it by running the help command:
+After installation, the \texttt{genppi} command should be available in your terminal. Check it by running the help command:
 \begin{lstlisting}[style=bashstyle]
-genppi.py --help
+genppi --help
 \end{lstlisting}
 This should display a list of all available parameters, confirming a successful installation.
+
+\textbf{Important:} Use the \texttt{genppi} command, not \texttt{genppi.py}. The Python interface provides a unified command across all operating systems.
 
 \section{Running the Main Tests}
 GenPPI is designed to be user-friendly. The following tests cover over 90\% of use cases.
@@ -118,10 +120,10 @@ GenPPI is designed to be user-friendly. The following tests cover over 90\% of u
 The most common usage is to simply provide the directory with the protein files. \textbf{GenPPI automatically runs conserved neighborhood and phylogenetic profiles (Method 1) when multiple genomes are present.}
 \begin{lstlisting}[style=bashstyle]
 # Run GenPPI on the sample data (CN + PP Method 1 are automatic)
-genppi.py -dir samples
+genppi -dir samples
 
 # Run with gene fusion as well
-genppi.py -dir samples -genefusion
+genppi -dir samples -genefusion
 \end{lstlisting}
 The program will process the files and generate results in the \texttt{samples/} folder.
 
@@ -135,28 +137,28 @@ genppi-download-model
 \textbf{Running the test:}
 \begin{lstlisting}[style=bashstyle]
 # Run GenPPI with the Machine Learning model
-genppi.py -dir samples -ml
+genppi -dir samples -ml
 \end{lstlisting}
 
 \subsection{Test 3: Testing Phylogenetic Profile Methods}
 GenPPI offers 7 different methods for phylogenetic profile prediction. Method 1 is the default, but you can choose others using \texttt{-ppmethod}:
 \begin{lstlisting}[style=bashstyle]
 # Method 1: No filters (default - these commands are equivalent)
-genppi.py -dir samples
-genppi.py -dir samples -ppmethod 1
+genppi -dir samples
+genppi -dir samples -ppmethod 1
 
 # Method 2: Only conserved neighborhood interactions
-genppi.py -dir samples -ppmethod 2
+genppi -dir samples -ppmethod 2
 
 # Method 5: Filter by threshold (requires additional parameters)
-genppi.py -dir samples -ppmethod 5 -threshold 5 -plusminus ">"
+genppi -dir samples -ppmethod 5 -threshold 5 -plusminus ">"
 \end{lstlisting}
 
 \subsection{Test 4: Running with Low Memory Usage (\texttt{--use-db})}
 If you are working with many genomes or on a machine with limited memory, use the \texttt{--use-db} flag. This makes GenPPI save intermediate data to disk instead of keeping it in memory.
 \begin{lstlisting}[style=bashstyle]
 # Combine with standard execution or with -ml
-genppi.py -dir samples -ml --use-db
+genppi -dir samples -ml --use-db
 \end{lstlisting}
 
 \section{Verifying the Results}
@@ -180,7 +182,7 @@ rm -f genppi_py/genppi_py/bin/genppi32g-Linux
     \end{lstlisting}
     \item \textbf{Run a simple command:}
     \begin{lstlisting}[style=bashstyle]
-genppi.py --help
+genppi --help
     \end{lstlisting}
 \end{enumerate}
 The package should silently download the missing executable and then display the help message.
@@ -194,7 +196,7 @@ rm -f genppi_py/genppi_py/bin/model.dat
     \end{lstlisting}
     \item \textbf{Run a command that requires the model:}
     \begin{lstlisting}[style=bashstyle]
-genppi.py -dir samples -ml
+genppi -dir samples -ml
     \end{lstlisting}
 \end{enumerate}
 You will see messages indicating that \texttt{model.dat} was not found and that the download and extraction will begin.
@@ -204,10 +206,14 @@ If something goes wrong, check the following points:
 \begin{itemize}
     \item \textbf{Permission Issues (Linux/macOS):} If you get a "Permission denied" error, the executables may lack execution permissions. Fix it with:
     \begin{lstlisting}[style=bashstyle]
+# For Python installation:
 chmod +x genppi_py/genppi_py/bin/genppi*
+
+# For manual download (executables are renamed):
+chmod +x genppi genppidb
     \end{lstlisting}
     
-    \item \textbf{Failed to Extract \texttt{model.dat}:} Version 0.1.2 uses the py7zr library for multi-volume extraction. If automatic extraction fails:
+    \item \textbf{Failed to Extract \texttt{model.dat}:} Version 0.1.7 uses the py7zr library for multi-volume extraction. If automatic extraction fails:
     \begin{enumerate}
         \item \textbf{Check py7zr installation:}
         \begin{lstlisting}[style=bashstyle]

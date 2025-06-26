@@ -30,7 +30,7 @@ def main():
     if len(sys.argv) < 2:
         print("GenPPI Python Interface - Build Script")
         print("=" * 50)
-        print("Usage: python build.py <command>")
+        print("Usage: python dev.py <command>")
         print("")
         print("Available commands:")
         print("  check       - Quick dependency and functionality check")
@@ -40,9 +40,9 @@ def main():
         print("  install-test- Test installation")
         print("")
         print("Examples:")
-        print("  python build.py check")
-        print("  python build.py test")
-        print("  python build.py deploy-test")
+        print("  python dev.py check")
+        print("  python dev.py test")
+        print("  python dev.py deploy-test")
         return 1
     
     command = sys.argv[1].lower()
@@ -59,7 +59,7 @@ def main():
         return 0 if run_script("test_installation.py", "Test Installation") else 1
     else:
         print(f"❌ Unknown command: {command}")
-        print("Run 'python build.py' for help")
+        print("Run 'python dev.py' for help")
         return 1
 
 if __name__ == "__main__":

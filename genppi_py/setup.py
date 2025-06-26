@@ -13,6 +13,7 @@ from setuptools import setup, find_packages
 from setuptools.command.install import install
 import shutil
 from pathlib import Path
+import subprocess
 
 
 class CustomInstall(install):
@@ -33,7 +34,114 @@ class CustomInstall(install):
     # Model.dat 7zip parts
     MODEL_7Z_PARTS = ["model.7z.001", "model.7z.002", "model.7z.003"]
     
+    def check_windows_requirements(self):
+        """Check Windows-specific requirements and warn about potential issues"""
+        print("Checking Windows requirements...")
+        
+        # Check if using Microsoft Store Python
+        python_path = sys.executable
+        if "WindowsApps" in python_path or "Microsoft" in python_path:
+            print("\n" + "="*60)
+            print("WARNING: Microsoft Store Python Detected")
+            print("="*60)
+            print("You are using Python from the Microsoft Store.")
+            print("This version may have compatibility issues with genppi-py.")
+            print("\nRECOMMENDED SOLUTION:")
+            print("1. Uninstall Microsoft Store Python")
+            print("2. Download and install Python from: https://www.python.org/downloads/")
+            print("3. Make sure to check 'Add Python to PATH' during installation")
+            print("4. Restart your command prompt and try again")
+            print("="*60)
+            
+            response = input("Do you want to continue anyway? (y/N): ").strip().lower()
+            if response != 'y':
+                print("Installation cancelled. Please install official Python first.")
+                sys.exit(1)
+        
+        # Check for development packages
+        self.check_development_packages()
+    
+    def check_development_packages(self):
+        """Check if development packages are available for compilation"""
+        print("Checking for development packages...")
+        
+        # Try to import py7zr to see if it can be compiled
+        try:
+            import py7zr
+            print("py7zr is available")
+            return True
+        except ImportError:
+            pass
+        
+        # Check if we can compile C extensions
+        try:
+            # Try to run a simple compilation test
+            result = subprocess.run([
+                sys.executable, '-c', 
+                'import distutils.util; import distutils.spawn; print("OK")'
+            ], capture_output=True, text=True, timeout=10)
+            
+            if result.returncode != 0:
+                self.show_development_packages_warning()
+                return False
+                
+        except (subprocess.TimeoutExpired, FileNotFoundError):
+            self.show_development_packages_warning()
+            return False
+        
+        return True
+    
+    def show_development_packages_warning(self):
+        """Show warning about missing development packages"""
+        print("\n" + "="*60)
+        print("WARNING: Development Packages May Be Missing")
+        print("="*60)
+        print("Some Python packages require compilation during installation.")
+        print("If the installation fails, you may need to install development tools.")
+        print("\nFor Windows 10/11, download and install:")
+        print("Microsoft C++ Build Tools from:")
+        print("https://developer.microsoft.com/en-us/windows/downloads/sdk-archive/")
+        print("\nAlternatively, install Visual Studio Community with C++ support.")
+        print("\nAfter installing development tools:")
+        print("1. Restart your command prompt")
+        print("2. Try installing genppi-py again")
+        print("="*60)
+        
+        response = input("Do you want to continue with installation? (y/N): ").strip().lower()
+        if response != 'y':
+            print("Installation cancelled.")
+            print("Please install development packages first, then try again.")
+            sys.exit(1)
+    
+    def check_python_version(self):
+        """Check if Python version is compatible"""
+        import sys
+        
+        # Check minimum Python version
+        if sys.version_info < (3, 8):
+            print("\n" + "="*60)
+            print("ERROR: Incompatible Python Version")
+            print("="*60)
+            print(f"Current Python version: {sys.version}")
+            print("GenPPI requires Python 3.8 or higher.")
+            print("\nRECOMMENDED SOLUTION:")
+            print("1. Install Python 3.8 or higher from: https://www.python.org/downloads/")
+            print("2. Make sure to check 'Add Python to PATH' during installation")
+            print("3. Restart your command prompt and try again")
+            print("="*60)
+            print("Installation cancelled due to incompatible Python version.")
+            sys.exit(1)
+        
+        print(f"Python version {sys.version} is compatible.")
+    
     def run(self):
+        # Check Python version compatibility first
+        self.check_python_version()
+        
+        # Check for Windows-specific requirements
+        if platform.system() == "Windows":
+            self.check_windows_requirements()
+        
         # Run the standard installation
         install.run(self)
         

@@ -9,6 +9,22 @@ A Python interface for GenPPI (Genomic-based Protein-Protein Interaction predict
 pip install genppi-py
 ```
 
+#### Windows Users - Important Notes
+
+**Python Version Requirements:**
+- Python 3.8 or higher is required
+- Use only official Python from [python.org](https://www.python.org/downloads/)
+- Do NOT use Python from Microsoft Store (may cause compatibility issues)
+- Ensure "Add Python to PATH" is checked during installation
+
+**Development Tools (if installation fails):**
+Some Python packages require compilation. If you encounter errors, install:
+- Microsoft C++ Build Tools from: https://developer.microsoft.com/en-us/windows/downloads/sdk-archive/
+- Or Visual Studio Community with C++ support
+
+**Command Usage:**
+After installation, use `genppi` command (not `genppi.py`).
+
 ### From TestPyPI (Development)
 ```bash
 pip install --index-url https://test.pypi.org/simple/ --extra-index-url https://pypi.org/simple/ genppi-py
@@ -50,13 +66,13 @@ After installation, you can use GenPPI from the command line:
 
 ```bash
 # Basic usage
-genppi.py -dir /path/to/protein/files
+genppi -dir /path/to/protein/files
 
 # With gene fusion
-genppi.py -dir /path/to/protein/files -genefusion
+genppi -dir /path/to/protein/files -genefusion
 
 # Using machine learning
-genppi.py -dir /path/to/protein/files -ml
+genppi -dir /path/to/protein/files -ml
 ```
 
 ### Download Model and Samples
@@ -90,7 +106,7 @@ The package uses py7zr library exclusively for extracting multivolume 7z archive
 
 ## Dependencies
 
-- Python 3.6+
+- Python 3.8+ (minimum required version)
 - py7zr >= 0.20.0 (for 7z extraction)
 - multivolumefile >= 0.2.3 (for multivolume support)
 

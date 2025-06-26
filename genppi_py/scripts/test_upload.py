@@ -94,7 +94,7 @@ def main():
         print("1. Test installation:")
         print("   pip install --index-url https://test.pypi.org/simple/ genppi-py")
         print("2. Test functionality:")
-        print("   genppi.py --help")
+        print("   genppi --help")
         print("3. If everything works, deploy to production PyPI")
         print("="*50)
         return 0

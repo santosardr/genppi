@@ -15,6 +15,26 @@ The easiest way to use GENPPI is through the Python interface:
 pip install genppi-py
 ```
 
+#### Windows Users - Important Notes
+
+**Python Version Requirements:**
+- Python 3.8 or higher is required
+- Use only official Python from [python.org](https://www.python.org/downloads/)
+- Do NOT use Python from Microsoft Store (may cause compatibility issues)
+- Ensure "Add Python to PATH" is checked during installation
+
+**Development Tools (if installation fails):**
+Some Python packages require compilation. If you encounter errors, install:
+- Microsoft C++ Build Tools from: https://developer.microsoft.com/en-us/windows/downloads/sdk-archive/
+- Or Visual Studio Community with C++ support
+
+**Command Usage:**
+After installation, use `genppi` command (not `genppi.py`):
+```cmd
+genppi --help
+genppi -dir samples
+```
+
 ### Download Model and Sample Data
 ```bash
 # Download the machine learning model (required for -ml option)
@@ -27,13 +47,13 @@ genppi-download-samples
 ### Basic Usage
 ```bash
 # Run GENPPI on sample data
-genppi.py -dir samples
+genppi -dir samples
 
 # Run with gene fusion analysis
-genppi.py -dir samples -genefusion
+genppi -dir samples -genefusion
 
 # Run with machine learning (requires model download)
-genppi.py -dir samples -ml
+genppi -dir samples -ml
 ```
 
 The Python interface automatically:
@@ -57,7 +77,9 @@ software in megabytes.
 
 ## Manual Installation (Advanced Users)
 
-For users comfortable with Linux commands who prefer manual installation:
+For users comfortable with command-line who prefer manual installation:
+
+**Important Note:** Manual executables are not added to your system PATH. Downloaded executables are renamed to `genppi` or `genppidb` for easier usage. You must use `./genppi` (Linux/macOS) or `genppi.exe` (Windows) from the same directory. Ensure model.dat is in the same directory for ML features.
 
 ### Download Executables
 You can download pre-compiled executables from the [binaries](binaries/) folder or from our web interface at [genppi.facom.ufu.br](http://genppi.facom.ufu.br).
@@ -88,14 +110,14 @@ genppi-download-model
 genppi-download-samples
 
 # Basic run with sample data
-genppi.py -dir samples
+genppi -dir samples
 
 # Advanced configuration
-genppi.py -ppcomplete -expt fixed -w1 7 -cw1 4\ 
+genppi -ppcomplete -expt fixed -w1 7 -cw1 4\ 
 -ppdifftolerated 1 -pphistofilter -dir samples
 
 # With machine learning
-genppi.py -dir samples -ml
+genppi -dir samples -ml
 ```
 
 ### Manual Installation Examples
@@ -126,7 +148,16 @@ For instance, considering all the fasta files of proteins, each representing one
 are inside a target dir called 'mygenomes':
 
 ```bash
-    genppi -dir  mygenomes/
+    # For Python installation:
+    genppi -dir mygenomes/
+    
+    # For manual download (Linux/macOS):
+    ./genppi -dir mygenomes/
+    # or for database version: ./genppidb -dir mygenomes/
+    
+    # For manual download (Windows):
+    genppi.exe -dir mygenomes/
+    # or for database version: genppidb.exe -dir mygenomes/
 ```
 
 
@@ -134,8 +165,14 @@ are inside a target dir called 'mygenomes':
 (iii) A configuration that I use to frequently is this one:
 
 ```bash
-    genppi -ppcomplete -expt fixed -w1 7 -cw1 4\
-    -ppdifftolerated 1  -pphistofilter -dir  mygenomes/
+    # For Python installation:
+    genppi -ppcomplete -expt fixed -w1 7 -cw1 4 -ppdifftolerated 1 -pphistofilter -dir mygenomes/
+    
+    # For manual download (Linux/macOS):
+    ./genppi -ppcomplete -expt fixed -w1 7 -cw1 4 -ppdifftolerated 1 -pphistofilter -dir mygenomes/
+    
+    # For manual download (Windows):
+    genppi.exe -ppcomplete -expt fixed -w1 7 -cw1 4 -ppdifftolerated 1 -pphistofilter -dir mygenomes/
 ```
 
 Meaning:
@@ -182,11 +219,11 @@ pip install genppi-py
 genppi-download-samples
 
 # Run basic analysis
-genppi.py -dir samples
+genppi -dir samples
 
 # Run with machine learning (download model first)
 genppi-download-model
-genppi.py -dir samples -ml
+genppi -dir samples -ml
 ```
 
 ### Manual Installation Example
@@ -238,7 +275,11 @@ For Windows (manual installation):
 
 5.1) *Buchenera* genomes are one of the smallest genomes we have ever known; we expect a fast GENPPI execution and a few hundred edges for each genome. Let's make it happen:
 ```bash
-    genppi -dir test1/
+    # For manual download (Linux/macOS):
+    ./genppi -dir test1/
+    
+    # For manual download (Windows):
+    genppi.exe -dir test1/
 ```
 Checking the numerical results:
 
@@ -270,7 +311,11 @@ Ba_Sg.dot	430	5583
 
 5.2) I will relax the GENPPI parameters to obtain more interactions in the final networks. When looking for conserved phylogenetic profiles, I meant to do such a relaxing parameter telling the GENNPI algorithms to accept as similar proteins those with at least 65% of identity (-ml). Additionally, I will ask for a dynamic expansion in the conserved neighborhood algorithm; it will start with a minimum window size of four to infer conservation (-ws 4). If the algorithm is successful for an initial *ws*, it will expand the window size by four units for subsequent well-success expansions. After all, this is our command:
 ```bash
-    genppi -ml -expt dynamic -ws 4 -dir test2/
+    # For manual download (Linux/macOS):
+    ./genppi -ml -expt dynamic -ws 4 -dir test2/
+    
+    # For manual download (Windows):
+    genppi.exe -ml -expt dynamic -ws 4 -dir test2/
 ```
 Checking the numerical results:
 ```bash

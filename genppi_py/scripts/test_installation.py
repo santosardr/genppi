@@ -71,8 +71,8 @@ def test_installation():
             str(venv_pip), "install", 
             "--index-url", "https://test.pypi.org/simple/",
             "--extra-index-url", "https://pypi.org/simple/",
-            "genppi-py==0.1.5"
-        ], "Instalar genppi-py==0.1.5 do TestPyPI")
+            "genppi-py==0.1.7"
+        ], "Instalar genppi-py==0.1.7 do TestPyPI")
         
         # Test basic functionality
         if success:
@@ -92,9 +92,14 @@ def test_installation():
             ], "Verificar multivolumefile")
             
             # Test console scripts
+            if os.name == 'nt':  # Windows
+                genppi_cmd = venv_path / "Scripts" / "genppi.exe"
+            else:  # Unix-like
+                genppi_cmd = venv_path / "bin" / "genppi"
+            
             success &= run_command([
-                str(venv_python), "-m", "genppi_py.genppi", "--help"
-            ], "Testar execução do módulo genppi", check=False)
+                str(genppi_cmd), "--help"
+            ], "Testar comando genppi", check=False)
     
     return success
 
@@ -106,7 +111,7 @@ def main():
     if success:
         print("✅ TESTE DE INSTALAÇÃO BEM-SUCEDIDO!")
         print("\nComando para instalação:")
-        print("pip install --index-url https://test.pypi.org/simple/ --extra-index-url https://pypi.org/simple/ genppi-py==0.1.5")
+        print("pip install --index-url https://test.pypi.org/simple/ --extra-index-url https://pypi.org/simple/ genppi-py==0.1.7")
     else:
         print("❌ TESTE DE INSTALAÇÃO FALHOU!")
         print("\nVerifique os erros acima e tente novamente.")

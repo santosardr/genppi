@@ -6,6 +6,12 @@ Test script for GenPPI Python interface
 import os
 import sys
 from pathlib import Path
+
+# Add the parent directory to the Python path so we can import genppi_py
+current_dir = Path(__file__).parent
+parent_dir = current_dir.parent
+sys.path.insert(0, str(parent_dir))
+
 from genppi_py.genppi import get_executable_path, run_genppi
 
 def test_executable_path():

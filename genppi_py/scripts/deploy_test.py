@@ -179,9 +179,14 @@ def test_installation():
             ], "Test main function import")
             
             # Test console scripts
+            if os.name == 'nt':  # Windows
+                genppi_cmd = venv_path / "Scripts" / "genppi.exe"
+            else:  # Unix-like
+                genppi_cmd = venv_path / "bin" / "genppi"
+            
             success &= run_command([
-                str(venv_python), "-m", "genppi_py.genppi", "--help"
-            ], "Test genppi module execution", check=False)
+                str(genppi_cmd), "--help"
+            ], "Test genppi command", check=False)
             
             # Test dependencies
             success &= run_command([

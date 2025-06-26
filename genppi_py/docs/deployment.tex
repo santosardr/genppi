@@ -73,7 +73,7 @@
 \begin{document}
 \maketitle
 
-This document is a detailed guide on how to prepare, test, and publish the GenPPI Python interface on the Python Package Index (PyPI). Version 0.1.5 uses the py7zr library for multi-volume file extraction to ensure compatibility.
+This document is a detailed guide on how to prepare, test, and publish the GenPPI Python interface on the Python Package Index (PyPI). Version 0.1.7 uses the py7zr library for multi-volume file extraction to ensure compatibility.
 
 \section{Preparation Checklist}
 
@@ -128,18 +128,18 @@ genppi_py/
 Edit the \texttt{genppi\_py/\_\_init\_\_.py} and \texttt{pyproject.toml} files to update the version number, following semantic versioning.
 \begin{lstlisting}[style=pythonstyle]
 # in genppi_py/__init__.py
-__version__ = '0.1.5'  # Current version
+__version__ = '0.1.7'  # Current version
 
 # in pyproject.toml
 [project]
 name = "genppi-py"
-version = "0.1.5"
+version = "0.1.7"
 # ... rest of the configuration
 \end{lstlisting}
 
 \subsection{Review Configuration Files}
 \subsubsection{setup.py}
-Version 0.1.5 uses a simplified configuration. Required dependencies are defined in \texttt{pyproject.toml}:
+Version 0.1.7 uses a simplified configuration with Python 3.8+ requirement. Required dependencies are defined in \texttt{pyproject.toml}:
 \begin{lstlisting}[style=pythonstyle]
 # Current setup.py configuration (simplified)
 setup(
@@ -155,7 +155,7 @@ dependencies = [
     "multivolumefile>=0.2.3",  # Required by py7zr
 ]
 \end{lstlisting}
-Version 0.1.5 ensures that critical dependencies (py7zr and multivolumefile) are installed automatically. This eliminates issues with multi-volume file extraction.
+Version 0.1.7 ensures that critical dependencies (py7zr and multivolumefile) are installed automatically with Python 3.8+ requirement. This eliminates issues with multi-volume file extraction and compatibility problems.
 
 \textbf{Important notes on licenses:} 
 \begin{itemize}
@@ -174,7 +174,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "genppi-py"
-version = "0.1.5"
+version = "0.1.7"
 description = "Python interface for GenPPI"
 dependencies = [
     "py7zr>=0.20.0,<1.0.0",
@@ -182,7 +182,7 @@ dependencies = [
 ]
 
 [project.scripts]
-"genppi.py" = "genppi_py.genppi:main"
+"genppi" = "genppi_py.genppi:main"
 "genppi-download-samples" = "genppi_py.download_samples:download_samples"
 "genppi-download-model" = "genppi_py.download_model:main"
 \end{lstlisting}
@@ -216,15 +216,15 @@ You will need an account on \href{https://test.pypi.org/}{TestPyPI}. After uploa
 python -m venv test_env
 source test_env/bin/activate
 
-# Install version 0.1.5 from TestPyPI (with dependencies from official PyPI)
-pip install --index-url https://test.pypi.org/simple/ --extra-index-url https://pypi.org/simple/ genppi-py==0.1.5
+# Install version 0.1.7 from TestPyPI (with dependencies from official PyPI)
+pip install --index-url https://test.pypi.org/simple/ --extra-index-url https://pypi.org/simple/ genppi-py==0.1.7
 
 # Verify critical dependencies
 python -c "import py7zr; print('py7zr:', py7zr.__version__)"
 python -c "import multivolumefile; print('multivolumefile OK')"
 
 # Run a quick test
-genppi.py --help
+genppi --help
 \end{lstlisting}
 
 \subsection{Step 2: Publish to the Official PyPI}
@@ -259,6 +259,10 @@ After the official release, users can install simply with:
 \begin{lstlisting}[style=bashstyle]
 # SIMPLE COMMAND FOR END-USERS
 pip install genppi-py
+
+# After installation, use the 'genppi' command (not 'genppi.py')
+genppi --help
+genppi -dir samples
 \end{lstlisting}
 
 You will need an account on \href{https://pypi.org/}{PyPI}.
@@ -288,14 +292,14 @@ cat genppi_py.egg-info/PKG-INFO | head -20
 \end{lstlisting}
 
 \subsubsection{Dependency Issues on TestPyPI}
-Version 0.1.5 uses dependencies available on the official PyPI. If you encounter issues:
+Version 0.1.7 uses dependencies available on the official PyPI. If you encounter issues:
 \begin{lstlisting}[style=bashstyle]
 # Check if py7zr is available
 pip install "py7zr>=0.20.0,<1.0.0"
 pip install "multivolumefile>=0.2.3"
 
 # Then install the test package (with dependencies from official PyPI)
-pip install --index-url https://test.pypi.org/simple/ --extra-index-url https://pypi.org/simple/ genppi-py==0.1.5
+pip install --index-url https://test.pypi.org/simple/ --extra-index-url https://pypi.org/simple/ genppi-py==0.1.7
 
 # Verify installation
 python -c "import py7zr, multivolumefile; print('Dependencies OK')"
@@ -354,7 +358,7 @@ To release a new version:
 \begin{enumerate}
     \item Update the source code with new features or fixes.
     \item If needed, update the Lisp executables or \texttt{model.dat} file in the source GitHub repository.
-    \item Increment the version number in \texttt{genppi\_py/\_\_init\_\_.py}.
+    \item Increment the version number in \texttt{pyproject.toml}.
     \item Run the \texttt{publish.sh} script to publish the new version.
 \end{enumerate}
 

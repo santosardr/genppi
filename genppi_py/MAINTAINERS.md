@@ -4,7 +4,7 @@ This document provides instructions for maintainers of the GenPPI Python interfa
 
 ## Preparing a New Release
 
-1. Update the version number in `genppi_py/__init__.py` and `setup.py`.
+1. Update the version number in `pyproject.toml`.
 
 2. Prepare the release files:
 
@@ -51,7 +51,7 @@ Before releasing, make sure to test the package:
 2. Run the test script:
 
    ```bash
-   python test_genppi.py
+   python tests/test_genppi.py
    ```
 
 3. Test with actual protein files:
