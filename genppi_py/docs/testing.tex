@@ -84,15 +84,15 @@ pip install -e .
 To install the stable version from TestPyPI:
 
 \begin{lstlisting}[style=bashstyle]
-# Install version 0.1.2 from TestPyPI (with dependencies from official PyPI)
-pip install --index-url https://test.pypi.org/simple/ --extra-index-url https://pypi.org/simple/ genppi-py==0.1.2
+# Install version 0.1.7 from TestPyPI (with dependencies from official PyPI)
+pip install --index-url https://test.pypi.org/simple/ --extra-index-url https://pypi.org/simple/ genppi-py==0.1.7
 
 # Verify critical dependencies
 python -c "import py7zr; print('py7zr:', py7zr.__version__)"
 python -c "import multivolumefile; print('multivolumefile OK')"
 \end{lstlisting}
 
-\textbf{Important Note:} Version 0.1.2 exclusively uses the py7zr library to extract multi-volume \texttt{model.7z} files. The dependencies \texttt{py7zr>=0.20.0} and \texttt{multivolumefile>=0.2.3} are installed automatically.
+\textbf{Important Note:} Version 0.1.7 exclusively uses the py7zr library to extract multi-volume \texttt{model.7z} files. The dependencies \texttt{py7zr>=0.20.0} and \texttt{multivolumefile>=0.2.3} are installed automatically.
 
 \textbf{Note on TestPyPI:} Since TestPyPI does not host all dependencies, you must use the \texttt{--extra-index-url} flag. This allows pip to fetch dependencies (like py7zr and multivolumefile) from the official PyPI.
 
