@@ -1,6 +1,6 @@
 # GENPPI: Ab initio protein interaction network generator
 
-GENPPI is a software for creating complex networks of predicted proteins from tens or hundreds of genomes. The software is now available through an easy-to-use **Python interface** that automatically handles downloads and installation, making it accessible to researchers without Linux expertise.
+GENPPI is a software for creating complex networks of predicted proteins from tens or hundreds of genomes. The software is now available through an easy-to-use **Python interface** [![PyPI Downloads](https://static.pepy.tech/badge/genppi-py)](https://pepy.tech/projects/genppi-py). Since June 24, 2025, it automatically handles downloads and installations, making it accessible to researchers without Linux expertise.
 
 I have a hands-on youtube video explaining how to use it. Click the below image to watch it.
 
