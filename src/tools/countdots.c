@@ -32,62 +32,101 @@ void add_node(Graph *graph, const char *node)
 
 void add_edge(Graph *graph, const char *node1, const char *node2)
 {
-    
     // Sort the nodes before adding the edge
-    char sorted_node1[256];
-    char sorted_node2[256];
+    const char *sorted_node1;
+    const char *sorted_node2;
     if (strcmp(node1, node2) < 0)
     {
-        strcpy(sorted_node1, node1);
-        strcpy(sorted_node2, node2);
+        sorted_node1 = node1;
+        sorted_node2 = node2;
     }
     else
     {
-        strcpy(sorted_node1, node2);
-        strcpy(sorted_node2, node1);
+        sorted_node1 = node2;
+        sorted_node2 = node1;
     }
-    // Create the edge key by concatenating the two node names
-    char edge_key[512];
-    snprintf(edge_key, sizeof(edge_key), "%s-%s", sorted_node1, sorted_node2);
+
+    // Create the edge key dynamically
+    char *edge_key = g_strdup_printf("%s-%s", sorted_node1, sorted_node2);
 
     // Check if the edge already exists in the set
     if (g_hash_table_contains(graph->edge_set, edge_key)) {
+        g_free(edge_key);
         return;
     }
     // Add the edge to the set
-    g_hash_table_add(graph->edge_set, g_strdup(edge_key));
+    g_hash_table_add(graph->edge_set, edge_key);
     graph->num_edges++;
 }
 
-char *extractNodeName(const char *input)
+char *extract_node_name(const char *input, bool is_second_node)
 {
-    char *result = NULL;
-    if (input)
-    {
-        // Remove any leading or trailing spaces
-        const char *start = input;
-        while (isspace(*start))
-        {
-            start++;
-        }
-        const char *end = input + strlen(input) - 1;
-        while (end > start && isspace((unsigned char)*end))
-        {
-            end--;
-        }
+    if (!input) return NULL;
 
-        // Check if the node name is enclosed in double quotes
-        if (start[0] == '\"' && end[0] == '\"')
+    // Trim leading whitespace
+    while (isspace((unsigned char)*input))
+    {
+        input++;
+    }
+
+    if (*input == '\0') return NULL;
+
+    char *result = NULL;
+    if (*input == '\"')
+    {
+        // Enclosed in double quotes
+        input++; // Skip opening quote
+        const char *end = strchr(input, '\"');
+        if (end)
         {
-            // Extract the node name without the double quotes
-            result = (char *)malloc((end - start) * sizeof(char));
-            strncpy(result, start + 1, end - start - 1);
-            result[end - start - 1] = '\0';
+            size_t len = end - input;
+            result = (char *)malloc((len + 1) * sizeof(char));
+            if (result)
+            {
+                strncpy(result, input, len);
+                result[len] = '\0';
+            }
         }
         else
         {
-            // No double quotes, use the node name as is
-            result = strdup(start);
+            // Unclosed quote, extract everything
+            result = strdup(input);
+        }
+    }
+    else
+    {
+        // Not enclosed in double quotes
+        if (is_second_node)
+        {
+            // For the second node, read until whitespace, ';', '[', or '\0'
+            const char *p = input;
+            while (*p && !isspace((unsigned char)*p) && *p != ';' && *p != '[')
+            {
+                p++;
+            }
+            size_t len = p - input;
+            result = (char *)malloc((len + 1) * sizeof(char));
+            if (result)
+            {
+                strncpy(result, input, len);
+                result[len] = '\0';
+            }
+        }
+        else
+        {
+            // For the first node, it's the entire remaining string (trimmed)
+            const char *end = input + strlen(input) - 1;
+            while (end > input && isspace((unsigned char)*end))
+            {
+                end--;
+            }
+            size_t len = end - input + 1;
+            result = (char *)malloc((len + 1) * sizeof(char));
+            if (result)
+            {
+                strncpy(result, input, len);
+                result[len] = '\0';
+            }
         }
     }
     return result;
@@ -102,24 +141,23 @@ void count_nodes_edges(const char *dot_file, Graph *graph)
         exit(1);
     }
 
-    // Create the  sets
-    graph->edge_set = g_hash_table_new(g_str_hash, g_str_equal);
-    graph->node_set = g_hash_table_new(g_str_hash, g_str_equal);
+    // Create the sets with key destroy notification to prevent memory leaks
+    graph->edge_set = g_hash_table_new_full(g_str_hash, g_str_equal, g_free, NULL);
+    graph->node_set = g_hash_table_new_full(g_str_hash, g_str_equal, g_free, NULL);
 
-    char line[256];
+    char line[65536];
     while (fgets(line, sizeof(line), file))
     {
         char *node1 = NULL;
         char *node2 = NULL;
 
         // Check if the line contains an edge connection
-        if (strstr(line, " -- "))
+        char *sep = strstr(line, " -- ");
+        if (sep)
         {
-            // Split the line by " -- "
-            char *token = strtok(line, " -- ");
-            node1 = extractNodeName(token);
-            token = strtok(NULL, " -- ");
-            node2 = extractNodeName(token);
+            *sep = '\0';
+            node1 = extract_node_name(line, false);
+            node2 = extract_node_name(sep + 4, true);
         }
 
         if (node1 != NULL && node2 != NULL)
@@ -128,22 +166,42 @@ void count_nodes_edges(const char *dot_file, Graph *graph)
             add_node(graph, node1);
             add_node(graph, node2);
         }
+
+        if (node1 != NULL) free(node1);
+        if (node2 != NULL) free(node2);
     }
 
     fclose(file);
 }
 
-void process_file(const char *dot_file, int print_labels)
+void free_graph(Graph *graph)
+{
+    if (graph)
+    {
+        if (graph->edge_set)
+        {
+            g_hash_table_destroy(graph->edge_set);
+        }
+        if (graph->node_set)
+        {
+            g_hash_table_destroy(graph->node_set);
+        }
+        free(graph);
+    }
+}
+
+Graph *process_file(const char *dot_file, int print_labels)
 {
     Graph *graph = (Graph *)malloc(sizeof(Graph));
     if (graph == NULL)
     {
         printf("Memory allocation failed\n");
-        return;
+        return NULL;
     }
     graph->num_nodes = 0;
     graph->num_edges = 0;
     graph->edge_set = NULL;
+    graph->node_set = NULL;
 
     count_nodes_edges(dot_file, graph);
 
@@ -163,7 +221,7 @@ void process_file(const char *dot_file, int print_labels)
     }
 
     printf("%s\t%d\t%ld\n", filename, graph->num_nodes, graph->num_edges);
-    free(graph);
+    return graph;
 }
 
 void process_folder(const char *folder)
@@ -185,25 +243,15 @@ void process_folder(const char *folder)
     {
         dot_file[strcspn(dot_file, "\n")] = 0;
 
-        process_file(dot_file, print_labels);
+        Graph *graph = process_file(dot_file, print_labels);
         print_labels = 0;
 
-        Graph *graph = (Graph *)malloc(sizeof(Graph));
-        if (graph == NULL)
+        if (graph != NULL)
         {
-            printf("Memory allocation failed\n");
-            return;
+            total_nodes += graph->num_nodes;
+            total_edges += graph->num_edges;
+            free_graph(graph);
         }
-
-        graph->num_nodes = 0;
-        graph->num_edges = 0;
-        graph->edge_set = NULL;
-        count_nodes_edges(dot_file, graph);
-
-        total_nodes += graph->num_nodes;
-        total_edges += graph->num_edges;
-
-        free(graph);
     }
 
     pclose(pipe);
@@ -213,6 +261,7 @@ void process_folder(const char *folder)
         printf("\nSummary - Total nodes: %d, Total edges: %d\n", total_nodes, total_edges);
     }
 }
+
 int main(int argc, char *argv[])
 {
     if (argc != 2)
@@ -239,7 +288,11 @@ int main(int argc, char *argv[])
     {
         if (S_ISREG(path_stat.st_mode))
         {
-            process_file(path, 1);
+            Graph *graph = process_file(path, 1);
+            if (graph != NULL)
+            {
+                free_graph(graph);
+            }
         }
         else if (S_ISDIR(path_stat.st_mode))
         {
@@ -256,4 +309,5 @@ int main(int argc, char *argv[])
         printf("Failed to get file or directory status.\n");
         return 1;
     }
+    return 0;
 }
