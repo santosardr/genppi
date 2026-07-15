@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "genppi-py"
-version = "0.1.7"
+version = "0.1.8"
 description = "Python interface for GenPPI (Genomic-based Protein-Protein Interaction prediction)"
 authors = [{name = "GenPPI Team", email = "example@example.com"}]
 license = {text = "GPL-3.0-or-later"}

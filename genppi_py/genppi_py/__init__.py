@@ -6,7 +6,7 @@ executable downloads, model files, and providing a unified command-line interfac
 all operating systems.
 """
 
-__version__ = "0.1.7"
+__version__ = "0.1.8"
 __author__ = "GenPPI Team"
 __email__ = "santosardr@ufu.br"
 
