@@ -12,7 +12,7 @@ pip install genppi-py
 #### Windows Users - Important Notes
 
 **Python Version Requirements:**
-- Python 3.8 or higher is required
+- Python 3.10 or higher is required
 - Use only official Python from [python.org](https://www.python.org/downloads/)
 - Do NOT use Python from Microsoft Store (may cause compatibility issues)
 - Ensure "Add Python to PATH" is checked during installation
@@ -106,8 +106,8 @@ The package uses py7zr library exclusively for extracting multivolume 7z archive
 
 ## Dependencies
 
-- Python 3.8+ (minimum required version)
-- py7zr >= 0.20.0 (for 7z extraction)
+- Python 3.10+ (minimum required version)
+- py7zr >= 1.1.3 (for 7z extraction, resolving CVE-2026-23879)
 - multivolumefile >= 0.2.3 (for multivolume support)
 
 All dependencies are installed automatically.

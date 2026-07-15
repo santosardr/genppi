@@ -151,8 +151,8 @@ setup(
 # Dependencies are defined in pyproject.toml
 [project]
 dependencies = [
-    "py7zr>=0.20.0,<1.0.0",  # For multi-volume 7z extraction
-    "multivolumefile>=0.2.3",  # Required by py7zr
+    "py7zr>=1.1.3,<2.0.0",  # For multi-volume 7z extraction (resolving CVE-2026-23879)
+    "multivolumefile>=0.2.3,<0.3.0",  # Required by py7zr
 ]
 \end{lstlisting}
 Version 0.1.7 ensures that critical dependencies (py7zr and multivolumefile) are installed automatically with Python 3.8+ requirement. This eliminates issues with multi-volume file extraction and compatibility problems.
@@ -177,8 +177,8 @@ name = "genppi-py"
 version = "0.1.7"
 description = "Python interface for GenPPI"
 dependencies = [
-    "py7zr>=0.20.0,<1.0.0",
-    "multivolumefile>=0.2.3",
+    "py7zr>=1.1.3,<2.0.0",
+    "multivolumefile>=0.2.3,<0.3.0",
 ]
 
 [project.scripts]
@@ -295,8 +295,8 @@ cat genppi_py.egg-info/PKG-INFO | head -20
 Version 0.1.7 uses dependencies available on the official PyPI. If you encounter issues:
 \begin{lstlisting}[style=bashstyle]
 # Check if py7zr is available
-pip install "py7zr>=0.20.0,<1.0.0"
-pip install "multivolumefile>=0.2.3"
+pip install "py7zr>=1.1.3,<2.0.0"
+pip install "multivolumefile>=0.2.3,<0.3.0"
 
 # Then install the test package (with dependencies from official PyPI)
 pip install --index-url https://test.pypi.org/simple/ --extra-index-url https://pypi.org/simple/ genppi-py==0.1.7

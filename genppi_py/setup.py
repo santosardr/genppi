@@ -278,7 +278,7 @@ class CustomInstall(install):
                 print("         with py7zr.SevenZipFile(vol, mode='r') as archive:")
                 print("             archive.extractall(path='.')")
                 print(f"  3. Place the extracted model.dat file in: {bin_dir}")
-                print("  4. Ensure py7zr is installed: pip install --upgrade --force-reinstall \"py7zr>=0.20.0,<1.0.0\"")
+                print("  4. Ensure py7zr is installed: pip install --upgrade --force-reinstall \"py7zr>=1.1.3,<2.0.0\" \"multivolumefile>=0.2.3,<0.3.0\"")
 
 
 setup(

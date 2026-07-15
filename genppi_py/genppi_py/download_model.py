@@ -122,7 +122,7 @@ def download_model_file(bin_dir=None):
         else:
             print("\nExtraction failed.", file=sys.stderr)
             print("Please extract manually using the following steps:", file=sys.stderr)
-            print("1. Ensure py7zr is installed: pip install --upgrade --force-reinstall \"py7zr>=0.20.0,<1.0.0\"", file=sys.stderr)
+            print("1. Ensure py7zr is installed: pip install --upgrade --force-reinstall \"py7zr>=1.1.3,<2.0.0\" \"multivolumefile>=0.2.3,<0.3.0\"", file=sys.stderr)
             print("2. Download the 7z parts to the same directory:", file=sys.stderr)
             for part in model_7z_parts:
                 print(f"   - {github_raw_url}{part}", file=sys.stderr)
